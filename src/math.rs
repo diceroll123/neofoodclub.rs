@@ -38,6 +38,7 @@ pub fn pirate_binary(index: u8, arena: u8) -> u32 {
 /// let bin = neofoodclub::math::pirates_binary([0, 1, 2, 3, 4]);
 /// assert_eq!(bin, 0x08421);
 /// ```
+#[inline]
 pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
     bets_indices
         .iter()
@@ -69,6 +70,12 @@ pub fn binary_to_indices(binary: u32) -> Vec<u8> {
 /// ```
 /// let bin = neofoodclub::math::bets_hash_to_bet_indices("faa");
 /// assert_eq!(bin, [[1, 0, 0, 0, 0]]);
+///
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("faafaafaafaafaafaa");
+/// assert_eq!(bin, [[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 1], [1, 0, 0, 0, 0]]);
+///
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("jmbcoemycobmbhofmdcoamyck");
+/// assert_eq!(bin, [[1, 4, 2, 2, 0], [1, 0, 2, 2, 4], [0, 4, 2, 2, 4], [4, 0, 2, 2, 4], [0, 1, 2, 2, 0], [1, 1, 2, 2, 4], [1, 0, 2, 2, 0], [3, 0, 2, 2, 4], [0, 0, 2, 2, 4], [4, 0, 2, 2, 0]]);
 /// ```
 pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<Vec<u8>> {
     let indices: Vec<u8> = bets_hash.chars().map(|chr| chr as u8 - b'a').collect();
@@ -78,12 +85,6 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<Vec<u8>> {
         .flat_map(|&e| vec![(e as f64 / 5.0).floor() as u8, (e % 5)])
         .collect();
 
-    let filtered_output: Vec<Vec<u8>> = output
-        .chunks(5)
-        .filter(|x| x.iter().any(|&n| n > 0))
-        .map(Vec::from)
-        .collect();
-
     // due to the way this algorithm works, there could be resulting chunks that are entirely all 0,
     // so we filter them out.
     // good examples:
@@ -91,7 +92,11 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<Vec<u8>> {
     // "faafaafaafaafaafaa" -> [[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 1], [0, 0, 0, 0, 0], [1, 0, 0, 0, 0]]
     // --------------------------------------------------------------------------------------------------------------^ note the array containing all zeros
 
-    filtered_output
+    output
+        .chunks(5)
+        .filter(|x| x.iter().any(|&n| n > 0))
+        .map(Vec::from)
+        .collect()
 }
 
 /// ```
@@ -99,26 +104,55 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<Vec<u8>> {
 /// assert_eq!(hash, "AaYAbWAcUAdSAeQ");
 /// ```
 pub fn bet_amounts_to_amounts_hash(bet_amounts: &[u32]) -> String {
-    let mut letters = String::new();
+    bet_amounts
+        .iter()
+        .map(|&value| {
+            let mut state = value % BET_AMOUNT_MAX + BET_AMOUNT_MAX;
+            let mut these_letters = String::new();
 
-    for &value in bet_amounts {
-        let these_letters: String = (0..3)
-            .scan(value % BET_AMOUNT_MAX + BET_AMOUNT_MAX, |state, _| {
-                let letter_index: u8 = (*state % 52) as u8;
-                *state = (*state as f64 / 52.0).floor() as u32;
-                Some(if letter_index < 26 {
+            for _ in 0..3 {
+                let letter_index = (state % 52) as u8;
+                state = (state as f64 / 52.0).floor() as u32;
+                let letter = if letter_index < 26 {
                     (letter_index + b'a') as char
                 } else {
                     (letter_index + b'A' - 26) as char
-                })
-            })
-            .collect();
+                };
+                these_letters.push(letter);
+            }
 
-        // reverse the string and add it to the letters
-        letters.push_str(&these_letters.chars().rev().collect::<String>());
+            these_letters.chars().rev().collect::<String>()
+        })
+        .collect()
+}
+
+/// ```
+/// let hash = neofoodclub::math::amounts_hash_to_bet_amounts("AaYAbWAcUAdSAeQ");
+/// assert_eq!(hash, vec![Some(50), Some(100), Some(150), Some(200), Some(250)]);
+/// ```
+pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
+    let mut nums = Vec::new();
+
+    for chunk in amounts_hash.chars().collect::<Vec<_>>().chunks(3) {
+        let mut e = 0_u32;
+        for &n in chunk {
+            e *= 52;
+            let index = (('a'..='z')
+                .chain('A'..='Z')
+                .position(|c| c as u8 == n as u8)
+                .unwrap_or_default()) as u32;
+            e += index;
+        }
+
+        let value = e - BET_AMOUNT_MAX;
+        if value < BET_AMOUNT_MIN {
+            nums.push(None);
+        } else {
+            nums.push(Some(value));
+        }
     }
 
-    letters
+    nums
 }
 
 /// ```
@@ -126,31 +160,28 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[u32]) -> String {
 /// assert_eq!(hash, "faa");
 /// ```
 pub fn bets_hash_value(bets_indices: Vec<Vec<u8>>) -> String {
-    let mut letters = String::new();
-
     let mut flattened: Vec<u8> = bets_indices.into_iter().flatten().collect();
 
-    while flattened.len() % 2 != 0 {
+    if flattened.len() % 2 != 0 {
         flattened.push(0);
     }
 
-    for chunk in flattened.chunks(2) {
-        let multiplier = chunk[0];
-        let adder = chunk[1];
+    flattened
+        .chunks_exact(2)
+        .map(|chunk| {
+            let [multiplier, adder] = [chunk[0], chunk[1]];
 
-        // char_index is the index of the character in the alphabet
-        // 0 = a, 1 = b, 2 = c, ..., 25 = z
-        let char_index = multiplier * 5 + adder;
+            // char_index is the index of the character in the alphabet
+            // 0 = a, 1 = b, 2 = c, ..., 25 = z
+            let char_index = multiplier * 5 + adder;
 
-        // 97 is where the alphabet starts in ASCII, so char_index of 0 is "a"
-        let letter: char = (char_index + 97).into();
-
-        letters.push(letter);
-    }
-
-    letters
+            // b'a' is the byte literal for the ASCII "a", which is 97
+            char::from(b'a' + char_index).to_string()
+        })
+        .collect()
 }
 
+#[inline]
 pub fn ib_doable(binary: u32) -> bool {
     BIT_MASKS.iter().all(|&mask| binary & mask != 0)
 }
