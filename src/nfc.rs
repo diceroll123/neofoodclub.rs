@@ -517,17 +517,14 @@ impl NeoFoodClub {
 impl NeoFoodClub {
     // URL-related stuff
     pub fn make_url(&self, bets: &Bets) -> String {
-        let mut url = "https://neofood.club".to_string();
-
-        url.push_str("/#round=");
-        url.push_str(&self.round().to_string());
-
-        url.push_str("&b=");
-        url.push_str(&bets.bets_hash());
+        let mut url = format!(
+            "https://neofood.club/#round={}&b={}",
+            self.round(),
+            bets.bets_hash()
+        );
 
         if let Some(amounts_hash) = bets.amounts_hash() {
-            url.push_str("&a=");
-            url.push_str(&amounts_hash);
+            url.push_str(&format!("&a={}", amounts_hash));
         }
 
         url
