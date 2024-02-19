@@ -39,13 +39,12 @@ pub fn pirate_binary(index: u8, arena: u8) -> u32 {
 /// assert_eq!(bin, 0x08421);
 /// ```
 pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
-    let mut total: u32 = 0;
-
-    for (arena, index) in bets_indices.iter().enumerate() {
-        total |= pirate_binary(*index, arena as u8)
-    }
-
-    total
+    bets_indices
+        .iter()
+        .enumerate()
+        .fold(0, |total, (arena, index)| {
+            total | pirate_binary(*index, arena as u8)
+        })
 }
 
 /// ```
@@ -54,19 +53,17 @@ pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
 /// ```
 #[inline]
 pub fn binary_to_indices(binary: u32) -> Vec<u8> {
-    let mut indices: Vec<u8> = Vec::with_capacity(5);
-
-    for mask in BIT_MASKS.iter() {
-        let masked = mask & binary;
-        if masked == 0 {
-            indices.push(0);
-            continue;
-        }
-        let val: u32 = 4 - (masked.trailing_zeros() % 4);
-        indices.push(val as u8);
-    }
-
-    indices
+    BIT_MASKS
+        .iter()
+        .map(|&mask| {
+            let masked = mask & binary;
+            if masked == 0 {
+                0
+            } else {
+                4 - (masked.trailing_zeros() % 4) as u8
+            }
+        })
+        .collect()
 }
 
 /// ```
