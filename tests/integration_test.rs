@@ -1,3 +1,4 @@
+use neofoodclub::math::{self, BET_AMOUNT_MAX, BET_AMOUNT_MIN};
 use neofoodclub::modifier::{Modifier, ModifierFlags};
 use neofoodclub::nfc::NeoFoodClub;
 
@@ -191,5 +192,26 @@ mod tests {
         let bets = nfc.make_gambit_bets(0x12481);
 
         assert!(bets.is_gambit());
+    }
+
+    #[test]
+    fn test_bet_amounts_hash_encoding_and_decoding() {
+        // loop from 50 to 70000
+        for amount in BET_AMOUNT_MIN..BET_AMOUNT_MAX {
+            let amounts = vec![amount; 10];
+            let hash = math::bet_amounts_to_amounts_hash(&amounts);
+            assert_eq!(
+                math::amounts_hash_to_bet_amounts(&hash),
+                vec![Some(amount); 10]
+            );
+        }
+    }
+
+    #[test]
+    fn test_bet_amounts_hash_encoding_and_decoding_none() {
+        // amount too low, returns None
+        let amounts = vec![BET_AMOUNT_MIN - 1; 10];
+        let hash = math::bet_amounts_to_amounts_hash(&amounts);
+        assert_eq!(math::amounts_hash_to_bet_amounts(&hash), vec![None; 10]);
     }
 }
