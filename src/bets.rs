@@ -114,6 +114,52 @@ impl<'a> Bets<'a> {
         })
     }
 
+    /// Returns whether or not this set is a "gambit" set.
+    /// The rules for what a gambit is, is *somewhat* arbitrary:
+    ///     - The largest integer in the binary representation of the bet set must have five 1's.
+    ///     - All bets must be subsets of the largest integer.
+    ///     - There must be at least 2 bets.
+    pub fn is_gambit(&self) -> bool {
+        if self.array_indices.len() < 2 {
+            return false;
+        }
+
+        let binaries = self.get_binaries();
+
+        let highest: u32 = *binaries.iter().max().unwrap();
+
+        if highest.count_ones() != 5 {
+            return false;
+        }
+
+        binaries.iter().all(|b| (highest & *b) == *b)
+    }
+
+    /// Returns whether or not this set is guaranteed to profit.
+    /// Must be bustproof, as well.
+    pub fn is_guaranteed_win(&self) -> bool {
+        if !self.is_bustproof() {
+            return false;
+        }
+
+        let Some(amounts) = &self.amounts else {
+            return false;
+        };
+
+        let highest_bet_amount = *amounts.iter().max().unwrap();
+
+        // multiply each odds by each bet amount
+        let lowest_winning_bet_amount = self
+            .odds_values()
+            .iter()
+            .enumerate()
+            .map(|(index, odds)| odds * amounts[index])
+            .min()
+            .unwrap();
+
+        highest_bet_amount < lowest_winning_bet_amount
+    }
+
     /// Returns the odds of the bets
     pub fn odds_values(&self) -> Vec<u32> {
         self.array_indices
