@@ -89,6 +89,9 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 
 /// Returns the bet indices from a given bet hash.
 /// ```
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("f");
+/// assert_eq!(bin, [[1, 0, 0, 0, 0]]);
+///
 /// let bin = neofoodclub::math::bets_hash_to_bet_indices("faa");
 /// assert_eq!(bin, [[1, 0, 0, 0, 0]]);
 ///
@@ -101,10 +104,16 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
     let indices: Vec<u8> = bets_hash.chars().map(|chr| chr as u8 - b'a').collect();
 
-    let output: Vec<u8> = indices
+    let mut output: Vec<u8> = indices
         .iter()
         .flat_map(|&e| vec![(e as f64 / 5.0).floor() as u8, (e % 5)])
         .collect();
+
+    // make sure the length is a multiple of 5
+    let difference = output.len() % 5;
+    if difference != 0 {
+        output.resize(output.len() + (5 - difference), 0);
+    }
 
     // due to the way this algorithm works, there could be resulting chunks that are entirely all 0,
     // so we filter them out.
