@@ -89,6 +89,9 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 
 /// Returns the bet indices from a given bet hash.
 /// ```
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("");
+/// assert_eq!(bin, Vec::<[u8;5]>::new());
+///
 /// let bin = neofoodclub::math::bets_hash_to_bet_indices("f");
 /// assert_eq!(bin, [[1, 0, 0, 0, 0]]);
 ///
