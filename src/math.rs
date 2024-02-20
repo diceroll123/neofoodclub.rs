@@ -98,7 +98,7 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 /// let bin = neofoodclub::math::bets_hash_to_bet_indices("jmbcoemycobmbhofmdcoamyck");
 /// assert_eq!(bin, [[1, 4, 2, 2, 0], [1, 0, 2, 2, 4], [0, 4, 2, 2, 4], [4, 0, 2, 2, 4], [0, 1, 2, 2, 0], [1, 1, 2, 2, 4], [1, 0, 2, 2, 0], [3, 0, 2, 2, 4], [0, 0, 2, 2, 4], [4, 0, 2, 2, 0]]);
 /// ```
-pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<Vec<u8>> {
+pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
     let indices: Vec<u8> = bets_hash.chars().map(|chr| chr as u8 - b'a').collect();
 
     let output: Vec<u8> = indices
@@ -115,8 +115,12 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<Vec<u8>> {
 
     output
         .chunks(5)
-        .filter(|x| x.iter().any(|&n| n > 0))
-        .map(Vec::from)
+        .filter(|chunk| chunk.iter().any(|&n| n > 0))
+        .map(|chunk| {
+            let mut arr = [0; 5];
+            arr.copy_from_slice(chunk);
+            arr
+        })
         .collect()
 }
 
