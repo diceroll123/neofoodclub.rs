@@ -24,7 +24,7 @@ pub struct Odds {
 
 impl Odds {
     pub fn new(nfc: &NeoFoodClub, array_indices: Vec<u16>) -> Self {
-        let mut pirate_indices = Vec::<Vec<u8>>::with_capacity(array_indices.len());
+        let mut pirate_indices = Vec::<[u8; 5]>::with_capacity(array_indices.len());
         let mut odds_values = Vec::<u32>::with_capacity(array_indices.len());
 
         for index in array_indices.iter() {

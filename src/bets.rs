@@ -76,7 +76,7 @@ impl<'a> Bets<'a> {
 
     /// Returns a nested array of the indices of the pirates in their arenas
     /// making up these bets.
-    pub fn get_indices(&self) -> Vec<Vec<u8>> {
+    pub fn get_indices(&self) -> Vec<[u8; 5]> {
         self.array_indices
             .iter()
             .map(|i| binary_to_indices(self.nfc.data.bins[*i as usize]))

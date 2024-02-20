@@ -76,18 +76,15 @@ pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
 /// assert_eq!(indices, [0, 0, 0, 0, 4]);
 /// ```
 #[inline]
-pub fn binary_to_indices(binary: u32) -> Vec<u8> {
-    BIT_MASKS
-        .iter()
-        .map(|&mask| {
-            let masked = mask & binary;
-            if masked == 0 {
-                0
-            } else {
-                4 - (masked.trailing_zeros() % 4) as u8
-            }
-        })
-        .collect()
+pub fn binary_to_indices(binary: u32) -> [u8; 5] {
+    let mut indices = [0; 5];
+    for (i, &mask) in BIT_MASKS.iter().enumerate() {
+        let masked = mask & binary;
+        if masked != 0 {
+            indices[i] = 4 - (masked.trailing_zeros() % 4) as u8;
+        }
+    }
+    indices
 }
 
 /// Returns the bet indices from a given bet hash.
@@ -204,10 +201,10 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
 }
 
 /// ```
-/// let hash = neofoodclub::math::bets_hash_value(vec![vec![1, 0, 0, 0, 0]]);
+/// let hash = neofoodclub::math::bets_hash_value(vec![[1, 0, 0, 0, 0]]);
 /// assert_eq!(hash, "faa");
 /// ```
-pub fn bets_hash_value(bets_indices: Vec<Vec<u8>>) -> String {
+pub fn bets_hash_value(bets_indices: Vec<[u8; 5]>) -> String {
     let mut flattened: Vec<u8> = bets_indices.into_iter().flatten().collect();
 
     if flattened.len() % 2 != 0 {
@@ -249,7 +246,7 @@ fn ib_prob(binary: u32, probabilities: [[f64; 5]; 5]) -> f64 {
     total_prob
 }
 
-fn expand_ib_object(bets: &[Vec<u8>], bet_odds: &[u32]) -> HashMap<u32, u32> {
+fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32> {
     // makes a dict of permutations of the pirates + odds
     // this is why the bet table could be very long
 
@@ -364,7 +361,7 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
 }
 
 pub fn build_chance_objects(
-    bets: &[Vec<u8>],
+    bets: &[[u8; 5]],
     bet_odds: &[u32],
     probabilities: [[f64; 5]; 5],
 ) -> Vec<Chance> {
