@@ -218,6 +218,25 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
     nums
 }
 
+/// Returns the bet binaries from a given bet hash.
+/// ```
+/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("faa");
+/// assert_eq!(bins, vec![0x80000]);
+///
+/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("faafaafaafaafaafaa");
+/// assert_eq!(bins, vec![0x80000, 0x8000, 0x800, 0x80, 0x8, 0x80000]);
+///
+/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("ltqvqwgimhqtvrnywrwvijwnn");
+/// assert_eq!(bins, vec![0x48212, 0x81828, 0x14888, 0x24484, 0x28211, 0x82442, 0x11142, 0x41418, 0x82811, 0x44242]);
+///```
+#[inline]
+pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Vec<u32> {
+    bets_hash_to_bet_indices(bets_hash)
+        .iter()
+        .map(|&indices| pirates_binary(indices))
+        .collect()
+}
+
 /// ```
 /// let hash = neofoodclub::math::bets_hash_value(vec![[1, 0, 0, 0, 0]]);
 /// assert_eq!(hash, "faa");
