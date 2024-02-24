@@ -104,6 +104,7 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 /// let bin = neofoodclub::math::bets_hash_to_bet_indices("jmbcoemycobmbhofmdcoamyck");
 /// assert_eq!(bin, [[1, 4, 2, 2, 0], [1, 0, 2, 2, 4], [0, 4, 2, 2, 4], [4, 0, 2, 2, 4], [0, 1, 2, 2, 0], [1, 1, 2, 2, 4], [1, 0, 2, 2, 0], [3, 0, 2, 2, 4], [0, 0, 2, 2, 4], [4, 0, 2, 2, 0]]);
 /// ```
+#[inline]
 pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
     let indices: Vec<u8> = bets_hash.chars().map(|chr| chr as u8 - b'a').collect();
 
@@ -150,6 +151,7 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
 /// let count = neofoodclub::math::bets_hash_to_bets_count("dgpqsxgtqsigqqsngrqsegpvsdgfqqsgsqsdgk");
 /// assert_eq!(count, 15);
 /// ```
+#[inline]
 pub fn bets_hash_to_bets_count(bets_hash: &str) -> usize {
     bets_hash_to_bet_indices(bets_hash).len()
 }
@@ -159,6 +161,7 @@ pub fn bets_hash_to_bets_count(bets_hash: &str) -> usize {
 /// let hash = neofoodclub::math::bet_amounts_to_amounts_hash(&vec![50, 100, 150, 200, 250]);
 /// assert_eq!(hash, "AaYAbWAcUAdSAeQ");
 /// ```
+#[inline]
 pub fn bet_amounts_to_amounts_hash(bet_amounts: &[u32]) -> String {
     bet_amounts
         .iter()
@@ -193,6 +196,7 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[u32]) -> String {
 /// let amounts = neofoodclub::math::amounts_hash_to_bet_amounts("EmxCoKCoKCglDKUCYqEXkByWBpqzGO");
 /// assert_eq!(amounts, vec![Some(11463), Some(6172), Some(6172), Some(5731), Some(10030), Some(8024), Some(13374), Some(4000), Some(3500), None]);
 /// ```
+#[inline]
 pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
     let mut nums = Vec::with_capacity(amounts_hash.len() / 3 + 1);
 
@@ -241,6 +245,7 @@ pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Vec<u32> {
 /// let hash = neofoodclub::math::bets_hash_value(vec![[1, 0, 0, 0, 0]]);
 /// assert_eq!(hash, "faa");
 /// ```
+#[inline]
 pub fn bets_hash_value(bets_indices: Vec<[u8; 5]>) -> String {
     let mut flattened: Vec<u8> = bets_indices.into_iter().flatten().collect();
 
@@ -268,6 +273,7 @@ fn ib_doable(binary: u32) -> bool {
     BIT_MASKS.iter().all(|&mask| binary & mask != 0)
 }
 
+#[inline]
 fn ib_prob(binary: u32, probabilities: [[f64; 5]; 5]) -> f64 {
     // computes the probability that the winning combination is accepted by ib
     let mut total_prob: f64 = 1.0;
