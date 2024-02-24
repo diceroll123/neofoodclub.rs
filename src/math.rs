@@ -268,6 +268,22 @@ pub fn bets_hash_value(bets_indices: Vec<[u8; 5]>) -> String {
         .collect()
 }
 
+/// Returns the bet binaries from bet indices.
+/// ```
+/// let bins = neofoodclub::math::bets_indices_to_bet_binaries(vec![[1, 0, 0, 0, 0]]);
+/// assert_eq!(bins, vec![0x80000]);
+///
+/// let bins = neofoodclub::math::bets_indices_to_bet_binaries(vec![[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 1], [1, 0, 0, 0, 0]]);
+/// assert_eq!(bins, vec![0x80000, 0x8000, 0x800, 0x80, 0x8, 0x80000]);
+/// ```
+#[inline]
+pub fn bets_indices_to_bet_binaries(bets_indices: Vec<[u8; 5]>) -> Vec<u32> {
+    bets_indices
+        .iter()
+        .map(|&indices| pirates_binary(indices))
+        .collect()
+}
+
 #[inline]
 fn ib_doable(binary: u32) -> bool {
     BIT_MASKS.iter().all(|&mask| binary & mask != 0)
