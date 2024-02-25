@@ -33,38 +33,38 @@ pub trait PartialPirateThings {
 }
 
 pub struct PartialPirate {
-    id: usize,
+    pub id: usize,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub struct Pirate {
     /// The pirate's ID.
-    pub(crate) id: u8,
+    pub id: u8,
 
     /// The index of the arena in which the pirate is competing.
-    pub(crate) arena_id: u8,
+    pub arena_id: u8,
 
     /// The index of the pirate in the arena. One-indexed.
-    pub(crate) index: u8,
+    pub index: u8,
 
     /// The pirate's current odds. 2-13 inclusive.
-    pub(crate) current_odds: u8,
+    pub current_odds: u8,
 
     /// The pirate's opening odds. 2-13 inclusive.
-    pub(crate) opening_odds: u8,
+    pub opening_odds: u8,
 
     /// The pirate's positive food adjustment.
-    pub(crate) pfa: Option<u8>,
+    pub pfa: Option<u8>,
 
     /// The pirate's negative food adjustment.
-    pub(crate) nfa: Option<i8>,
+    pub nfa: Option<i8>,
 
     /// The pirate's total food adjustment. (pfa - nfa)
-    pub(crate) fa: Option<i8>,
+    pub fa: Option<i8>,
 
     /// Whether or not the pirate is a winner.
-    pub(crate) is_winner: bool,
+    pub is_winner: bool,
 }
 
 impl Pirate {
