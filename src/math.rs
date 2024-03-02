@@ -1,5 +1,4 @@
 use itertools::iproduct;
-use ndarray::Array1;
 use rayon::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 
@@ -353,28 +352,30 @@ fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32> {
 
 #[derive(Debug, Clone)]
 pub struct RoundDictData {
-    pub bins: Array1<u32>,
-    pub probs: Array1<f64>,
-    pub odds: Array1<u32>,
-    pub ers: Array1<f64>,
-    pub maxbets: Array1<u32>,
+    pub bins: Vec<u32>,
+    pub probs: Vec<f64>,
+    pub odds: Vec<u32>,
+    pub ers: Vec<f64>,
+    pub maxbets: Vec<u32>,
 }
 
 impl RoundDictData {
     /// Returns a "clamped" array of the bet amounts passed in where the minimum value is 50 and
     /// the maximum value is 70304, which is the highest value that the current hashing algorithm can understand.
-    pub fn fix_maxbet_amounts(&self) -> Array1<u32> {
-        let mut maxbets = self.maxbets.clone();
-        maxbets.mapv_inplace(|x| x.max(BET_AMOUNT_MIN).min(BET_AMOUNT_MAX));
-        maxbets
+    pub fn fix_maxbet_amounts(&self) -> Vec<u32> {
+        self.maxbets
+            .iter()
+            .map(|x| *x.max(&BET_AMOUNT_MIN).min(&BET_AMOUNT_MAX))
+            .collect()
     }
 
     /// Returns a "clamped" array of the bet amounts passed in where the minimum value is 50 and
     /// the maximum value is the max_bet passed in.
-    pub fn clamp_to_maxbet(&self, max_bet: u32) -> Array1<u32> {
-        let mut maxbets = self.maxbets.clone();
-        maxbets.mapv_inplace(|x| x.max(BET_AMOUNT_MIN).min(max_bet));
-        maxbets
+    pub fn clamp_to_maxbet(&self, max_bet: u32) -> Vec<u32> {
+        self.maxbets
+            .iter()
+            .map(|x| *x.max(&BET_AMOUNT_MIN).min(&max_bet))
+            .collect()
     }
 }
 
@@ -408,26 +409,26 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
         })
         .collect();
 
-    let mut _bins: Array1<u32> = Array1::zeros(3124);
-    let mut _probs: Array1<f64> = Array1::zeros(3124);
-    let mut _odds: Array1<u32> = Array1::zeros(3124);
-    let mut _ers: Array1<f64> = Array1::zeros(3124);
-    let mut _maxbets: Array1<u32> = Array1::zeros(3124);
+    let mut bins: Vec<u32> = Vec::with_capacity(3124);
+    let mut probs: Vec<f64> = Vec::with_capacity(3124);
+    let mut odds: Vec<u32> = Vec::with_capacity(3124);
+    let mut ers: Vec<f64> = Vec::with_capacity(3124);
+    let mut maxbets: Vec<u32> = Vec::with_capacity(3124);
 
-    for (i, (bin, std, odds, er, maxbet)) in nums.iter().enumerate() {
-        _bins[i] = *bin;
-        _probs[i] = *std;
-        _odds[i] = *odds;
-        _ers[i] = *er;
-        _maxbets[i] = *maxbet;
+    for (bin, std, odd, er, maxbet) in nums.iter() {
+        bins.push(*bin);
+        probs.push(*std);
+        odds.push(*odd);
+        ers.push(*er);
+        maxbets.push(*maxbet);
     }
 
     RoundDictData {
-        bins: _bins,
-        probs: _probs,
-        odds: _odds,
-        ers: _ers,
-        maxbets: _maxbets,
+        bins,
+        probs,
+        odds,
+        ers,
+        maxbets,
     }
 }
 

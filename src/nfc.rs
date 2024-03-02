@@ -1,5 +1,3 @@
-use std::ops::Mul;
-
 use crate::arena::Arenas;
 use crate::bets::Bets;
 use crate::math::{
@@ -200,14 +198,20 @@ impl NeoFoodClub {
         if !general {
             if let Some(bet_amount) = self.bet_amount {
                 // if there's a bet amount, we use Net Expected instead of Expected Return
-                let maxbets = &self.data.maxbets.map(|&x| x.min(bet_amount) as f64);
-                let new_ers = maxbets.mul(&ers) - maxbets;
+                let maxbets = &self.data.maxbets.iter().map(|&x| x.min(bet_amount) as f64);
+                let new_ers: Vec<f64> = maxbets
+                    .clone()
+                    .into_iter()
+                    .zip(ers.iter())
+                    .map(|(maxbet, er)| maxbet * er - maxbet)
+                    .collect();
+
                 ers = new_ers;
             }
         }
 
         // by default, this orders from least to greatest
-        let mut binding = argsort_by(&ers, |a, b| a.total_cmp(b));
+        let mut binding = argsort_by(&ers, &|a: &f64, b: &f64| a.total_cmp(b));
 
         // since it's reversed to begin with, we reverse it if
         // the modifier does not have the reverse flag
@@ -229,7 +233,7 @@ impl NeoFoodClub {
     fn get_sorted_odds_indices(&self, descending: bool, amount: usize) -> Vec<u16> {
         let odds = &self.data.odds;
 
-        let mut binding = argsort_by(odds, |a, b| a.cmp(b));
+        let mut binding = argsort_by(odds, &|a: &u32, b: &u32| a.cmp(b));
 
         if descending {
             binding.reverse();

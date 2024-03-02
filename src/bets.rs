@@ -59,7 +59,8 @@ impl<'a> Bets<'a> {
         let bins = &nfc.data.bins;
 
         let bin_indices: Vec<u16> = bins
-            .indexed_iter()
+            .iter()
+            .enumerate()
             .filter(|(_, b)| binaries.contains(b))
             .map(|(i, _)| i as u16)
             .collect();
