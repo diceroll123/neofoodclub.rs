@@ -16,6 +16,13 @@ fn make_test_nfc() -> NeoFoodClub {
 #[cfg(test)]
 mod tests {
 
+    // we parallelize our round data calculations, so nothing is guaranteed to be in order
+    // so in our tests we will be sorting and comparing that way
+
+    use core::panic;
+
+    use rayon::prelude::*;
+
     use super::*;
 
     #[test]
@@ -51,7 +58,14 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        assert_eq!(bets.bets_hash(), "baakfccakpceapaeaa");
+        let bets_hash = bets.bets_hash();
+
+        let mut binaries = math::bets_hash_to_bet_binaries(&bets_hash);
+        binaries.sort_unstable();
+
+        let expected = [4096, 8192, 16400, 16416, 16448, 16512, 32768];
+
+        assert_eq!(binaries, expected);
     }
 
     #[test]
@@ -59,21 +73,68 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        assert_eq!(
-            bets.amounts_hash(),
-            Some("AVrCXSAEOAZoAZoBJVAVr".to_string())
-        );
+        let amounts_hash = bets.amounts_hash();
+
+        let mut bet_amounts = math::amounts_hash_to_bet_amounts(&amounts_hash.unwrap());
+
+        bet_amounts.sort_unstable();
+
+        let expected = [
+            Some(1600),
+            Some(2461),
+            Some(2461),
+            Some(2666),
+            Some(2666),
+            Some(4571),
+            Some(8000),
+        ];
+
+        assert_eq!(bet_amounts, expected);
     }
 
     #[test]
     fn test_make_url() {
+        // since the order is not guaranteed, we will be using a querystring parser
+        // and then comparing the values
+
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        assert_eq!(
-            nfc.make_url(&bets),
-            "https://neofood.club/#round=8765&b=baakfccakpceapaeaa&a=AVrCXSAEOAZoAZoBJVAVr"
-        );
+        let url = nfc.make_url(&bets);
+
+        let [(beginning, round_number), (b, bets_hash), (a, amounts_hash)] =
+            querystring::querify(&url)[..]
+        else {
+            panic!("Failed to parse query strings from URL.");
+        };
+
+        assert_eq!(beginning, "https://neofood.club/#round");
+        assert_eq!(round_number, nfc.round().to_string());
+        assert_eq!(b, "b");
+        assert_eq!(a, "a");
+
+        let mut binaries = math::bets_hash_to_bet_binaries(&bets_hash);
+        binaries.sort_unstable();
+
+        let expected_binaries = [4096, 8192, 16400, 16416, 16448, 16512, 32768];
+
+        assert_eq!(binaries, expected_binaries);
+
+        let mut bet_amounts = math::amounts_hash_to_bet_amounts(&amounts_hash);
+
+        bet_amounts.sort_unstable();
+
+        let expected_bet_amounts = [
+            Some(1600),
+            Some(2461),
+            Some(2461),
+            Some(2666),
+            Some(2666),
+            Some(4571),
+            Some(8000),
+        ];
+
+        assert_eq!(bet_amounts, expected_bet_amounts);
     }
 
     #[test]
@@ -196,15 +257,17 @@ mod tests {
 
     #[test]
     fn test_bet_amounts_hash_encoding_and_decoding() {
-        // loop from 50 to 70000
-        for amount in BET_AMOUNT_MIN..BET_AMOUNT_MAX {
-            let amounts = vec![amount; 10];
-            let hash = math::bet_amounts_to_amounts_hash(&amounts);
-            assert_eq!(
-                math::amounts_hash_to_bet_amounts(&hash),
-                vec![Some(amount); 10]
-            );
-        }
+        // loop from 50 to 70304 in parallel
+        (BET_AMOUNT_MIN..BET_AMOUNT_MAX)
+            .into_par_iter() // makes this go from like 1.75s like no time
+            .for_each(|amount| {
+                let amounts = vec![amount; 10];
+                let hash = math::bet_amounts_to_amounts_hash(&amounts);
+                assert_eq!(
+                    math::amounts_hash_to_bet_amounts(&hash),
+                    vec![Some(amount); 10]
+                );
+            });
     }
 
     #[test]

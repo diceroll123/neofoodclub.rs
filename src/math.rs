@@ -1,5 +1,6 @@
 use itertools::iproduct;
 use ndarray::Array1;
+use rayon::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 
 use crate::chance::Chance;
@@ -378,36 +379,47 @@ impl RoundDictData {
 }
 
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
-    let mut _bins = Array1::<u32>::zeros(3124);
-    let mut _probs = Array1::<f64>::zeros(3124);
-    let mut _odds = Array1::<u32>::zeros(3124);
-    let mut _ers = Array1::<f64>::zeros(3124);
-    let mut _maxbets = Array1::<u32>::zeros(3124);
-
-    let mut arr_index = 0;
-
     // the first iteration is an empty bet, so we skip it with skip(1)
-    for (a, b, c, d, e) in iproduct!(0..5, 0..5, 0..5, 0..5, 0..5).skip(1) {
-        let mut total_bin: u32 = 0;
-        let mut total_probs: f64 = 1.0;
-        let mut total_odds: u32 = 1;
+    let nums: Vec<(u32, f64, u32, f64, u32)> = iproduct!(0..5, 0..5, 0..5, 0..5, 0..5)
+        .skip(1)
+        .par_bridge()
+        .map(|(a, b, c, d, e)| {
+            let mut total_bin: u32 = 0;
+            let mut total_probs: f64 = 1.0;
+            let mut total_odds: u32 = 1;
 
-        for (arena, index) in [a, b, c, d, e].iter().enumerate() {
-            if *index == 0 {
-                continue;
+            let nums = vec![a, b, c, d, e];
+            for (arena, index) in nums.iter().enumerate() {
+                if *index == 0 {
+                    continue;
+                }
+                total_bin += 1 << (19 - (index - 1 + arena * 4));
+                total_probs *= stds[arena][*index];
+                total_odds *= odds[arena][*index] as u32;
             }
-            total_bin += pirate_binary(*index as u8, arena as u8);
-            total_probs *= stds[arena][*index];
-            total_odds *= odds[arena][*index] as u32;
-        }
 
-        _bins[arr_index] = total_bin;
-        _probs[arr_index] = total_probs;
-        _odds[arr_index] = total_odds;
-        _ers[arr_index] = total_probs * total_odds as f64;
-        _maxbets[arr_index] = (1_000_000.0 / total_odds as f64).ceil() as u32;
+            (
+                total_bin,
+                total_probs,
+                total_odds,
+                total_probs * total_odds as f64,
+                (1_000_000.0 / total_odds as f64).ceil() as u32,
+            )
+        })
+        .collect();
 
-        arr_index += 1;
+    let mut _bins: Array1<u32> = Array1::zeros(3124);
+    let mut _probs: Array1<f64> = Array1::zeros(3124);
+    let mut _odds: Array1<u32> = Array1::zeros(3124);
+    let mut _ers: Array1<f64> = Array1::zeros(3124);
+    let mut _maxbets: Array1<u32> = Array1::zeros(3124);
+
+    for (i, (bin, std, odds, er, maxbet)) in nums.iter().enumerate() {
+        _bins[i] = *bin;
+        _probs[i] = *std;
+        _odds[i] = *odds;
+        _ers[i] = *er;
+        _maxbets[i] = *maxbet;
     }
 
     RoundDictData {
