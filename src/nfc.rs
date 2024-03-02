@@ -306,6 +306,7 @@ impl NeoFoodClub {
         bets
     }
 
+    /// Creates a Bets object that consists of a gambit of the given 5-bet pirates binary.
     pub fn make_gambit_bets(&self, pirates_binary: u32) -> Bets {
         if pirates_binary.count_ones() != 5 {
             panic!("Pirates binary must have 5 pirates.");
@@ -473,6 +474,24 @@ impl NeoFoodClub {
         }
 
         None
+    }
+
+    /// Creates a Bets object translated from a bets hash.
+    pub fn make_bets_from_hash(&self, hash: &str) -> Bets {
+        let mut bets = Bets::from_hash(self, hash);
+
+        bets.fill_bet_amounts();
+
+        bets
+    }
+
+    /// Creates a Bets object translated from a bets binary vector.
+    pub fn make_bets_from_binaries(&self, binaries: Vec<u32>) -> Bets {
+        let mut bets = Bets::from_binaries(self, binaries);
+
+        bets.fill_bet_amounts();
+
+        bets
     }
 }
 

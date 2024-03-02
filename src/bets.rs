@@ -1,5 +1,7 @@
 use crate::{
-    math::{bet_amounts_to_amounts_hash, bets_hash_value, binary_to_indices},
+    math::{
+        bet_amounts_to_amounts_hash, bets_hash_to_bet_binaries, bets_hash_value, binary_to_indices,
+    },
     nfc::NeoFoodClub,
     odds::Odds,
 };
@@ -28,7 +30,7 @@ impl<'a> Bets<'a> {
         }
     }
 
-    /// Fills the bet amounts with the maximum possible amount to hit 1 million.
+    /// Fills the bet amounts in-place with the maximum possible amount to hit 1 million.
     /// In short, for each bet we divide 1_000_000 by the odds, and round up.
     /// Then we use whichever is smaller, the bet amount or the result of that equation.
     /// If the result is less than 50, we use 50 instead.
@@ -52,6 +54,7 @@ impl<'a> Bets<'a> {
         self.amounts = Some(amounts);
     }
 
+    /// Creates a new Bets struct from a list of binaries
     pub fn from_binaries(nfc: &'a NeoFoodClub, binaries: Vec<u32>) -> Self {
         let bins = &nfc.data.bins;
 
@@ -62,6 +65,13 @@ impl<'a> Bets<'a> {
             .collect();
 
         Self::new(nfc, bin_indices, None)
+    }
+
+    /// Creates a new Bets struct from a hash
+    pub fn from_hash(nfc: &'a NeoFoodClub, hash: &str) -> Self {
+        let binaries = bets_hash_to_bet_binaries(hash);
+
+        Self::from_binaries(nfc, binaries)
     }
 
     /// Returns the number of bets
