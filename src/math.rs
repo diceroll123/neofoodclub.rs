@@ -389,7 +389,7 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
             let mut total_probs: f64 = 1.0;
             let mut total_odds: u32 = 1;
 
-            let nums = vec![a, b, c, d, e];
+            let nums = [a, b, c, d, e];
             for (arena, index) in nums.iter().enumerate() {
                 if *index == 0 {
                     continue;

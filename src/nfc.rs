@@ -201,7 +201,6 @@ impl NeoFoodClub {
                 let maxbets = &self.data.maxbets.iter().map(|&x| x.min(bet_amount) as f64);
                 let new_ers: Vec<f64> = maxbets
                     .clone()
-                    .into_iter()
                     .zip(ers.iter())
                     .map(|(maxbet, er)| maxbet * er - maxbet)
                     .collect();

@@ -113,14 +113,14 @@ mod tests {
         assert_eq!(b, "b");
         assert_eq!(a, "a");
 
-        let mut binaries = math::bets_hash_to_bet_binaries(&bets_hash);
+        let mut binaries = math::bets_hash_to_bet_binaries(bets_hash);
         binaries.sort_unstable();
 
         let expected_binaries = [4096, 8192, 16400, 16416, 16448, 16512, 32768];
 
         assert_eq!(binaries, expected_binaries);
 
-        let mut bet_amounts = math::amounts_hash_to_bet_amounts(&amounts_hash);
+        let mut bet_amounts = math::amounts_hash_to_bet_amounts(amounts_hash);
 
         bet_amounts.sort_unstable();
 
