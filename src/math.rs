@@ -128,11 +128,12 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
 
     output
         .chunks(5)
-        .filter(|chunk| chunk.iter().any(|&n| n > 0))
-        .map(|chunk| {
-            let mut arr = [0; 5];
-            arr.copy_from_slice(chunk);
-            arr
+        .filter_map(|chunk| {
+            if chunk.iter().any(|&n| n > 0) {
+                Some(chunk.try_into().unwrap())
+            } else {
+                None
+            }
         })
         .collect()
 }
@@ -198,28 +199,29 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[u32]) -> String {
 /// ```
 #[inline]
 pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
-    let mut nums = Vec::with_capacity(amounts_hash.len() / 3 + 1);
+    amounts_hash
+        .chars()
+        .collect::<Vec<_>>()
+        .chunks(3)
+        .map(|chunk| {
+            let mut value = 0_u32;
+            for &n in chunk {
+                value *= 52;
+                let index = (('a'..='z')
+                    .chain('A'..='Z')
+                    .position(|c| c as u8 == n as u8)
+                    .unwrap_or_default()) as u32;
+                value += index;
+            }
 
-    for chunk in amounts_hash.chars().collect::<Vec<_>>().chunks(3) {
-        let mut e = 0_u32;
-        for &n in chunk {
-            e *= 52;
-            let index = (('a'..='z')
-                .chain('A'..='Z')
-                .position(|c| c as u8 == n as u8)
-                .unwrap_or_default()) as u32;
-            e += index;
-        }
-
-        let value = e.saturating_sub(BET_AMOUNT_MAX);
-        if value < BET_AMOUNT_MIN {
-            nums.push(None);
-        } else {
-            nums.push(Some(value));
-        }
-    }
-
-    nums
+            let value = value.saturating_sub(BET_AMOUNT_MAX);
+            if value < BET_AMOUNT_MIN {
+                None
+            } else {
+                Some(value)
+            }
+        })
+        .collect()
 }
 
 /// Returns the bet binaries from a given bet hash.
@@ -312,10 +314,10 @@ fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32> {
     let mut bets_to_ib: HashMap<u32, u32> = HashMap::new();
 
     for (key, bet_value) in bets.iter().enumerate() {
-        let mut ib: u32 = 0;
-        for (&v, m) in bet_value.iter().zip(BIT_MASKS.into_iter()) {
-            ib |= CONVERT_PIR_IB[v as usize] & m;
-        }
+        let ib = bet_value
+            .iter()
+            .zip(BIT_MASKS.iter())
+            .fold(0, |acc, (&v, &m)| acc | CONVERT_PIR_IB[v as usize] & m);
         *bets_to_ib.entry(ib).or_insert(0) += bet_odds[key];
     }
 
