@@ -398,8 +398,7 @@ impl NeoFoodClub {
         let bets = match positives.len() {
             1 => {
                 // If only one arena is positive, we place 1 bet on each of the pirates of that arena. Total bets = 4.
-                let best_arenas = self.arenas.best();
-                let best_arena = best_arenas[0];
+                let best_arena = &positives[0];
 
                 let binaries: Vec<u32> = best_arena
                     .pirates
@@ -412,8 +411,7 @@ impl NeoFoodClub {
             2 => {
                 // If two arenas are positive, we place 1 bet on each of the three worst pirates of the best arena and
                 // 1 bet on each of the pirates of the second arena + the best pirate of the best arena. Total bets = 7
-                let best_arenas = self.arenas.best();
-                let (best_arena, second_best_arena) = (&best_arenas[0], &best_arenas[1]);
+                let (best_arena, second_best_arena) = (&positives[0], &positives[1]);
 
                 let best_pirate_binary = best_arena.best()[0].binary();
 
@@ -437,9 +435,8 @@ impl NeoFoodClub {
                 //  and 1 bet on each of the pirates of the third arena + the best pirate of the best arena + the best pirate
                 //  of the second arena. Total bets = 10.
 
-                let best_arenas = self.arenas.best();
                 let (best_arena, second_best_arena, third_best_arena) =
-                    (&best_arenas[0], &best_arenas[1], &best_arenas[2]);
+                    (&positives[0], &positives[1], &positives[2]);
 
                 let best_pirate_binary = best_arena.best()[0].binary();
                 let second_best_pirate_binary = second_best_arena.best()[0].binary();
