@@ -189,8 +189,8 @@ impl Arenas {
     }
 
     /// Returns an arena by index. 0-4 inclusive.
-    pub fn get_arena(&self, id: usize) -> Arena {
+    pub fn get_arena(&self, id: usize) -> Option<Arena> {
         // if id is invalid, return None
-        self.arenas[id].clone()
+        self.arenas.get(id).cloned()
     }
 }
