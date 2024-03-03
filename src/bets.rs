@@ -61,8 +61,13 @@ impl<'a> Bets<'a> {
         let bin_indices: Vec<u16> = bins
             .iter()
             .enumerate()
-            .filter(|(_, b)| binaries.contains(b))
-            .map(|(i, _)| i as u16)
+            .filter_map(|(i, b)| {
+                if binaries.contains(b) {
+                    Some(i as u16)
+                } else {
+                    None
+                }
+            })
             .collect();
 
         Self::new(nfc, bin_indices, None)

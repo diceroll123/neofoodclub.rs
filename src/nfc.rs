@@ -502,9 +502,13 @@ impl NeoFoodClub {
     // win-related stuff
 
     pub fn get_win_units(&self, bets: &Bets) -> u32 {
-        let mut units = 0;
         let winners_binary = self.winners_binary();
 
+        if winners_binary == 0 {
+            return 0;
+        }
+
+        let mut units = 0;
         for i in bets.array_indices.iter() {
             let bet_bin = self.data.bins[*i as usize];
             if bet_bin & winners_binary == bet_bin {
@@ -521,6 +525,10 @@ impl NeoFoodClub {
         };
 
         let winners_binary = self.winners_binary();
+
+        if winners_binary == 0 {
+            return 0;
+        }
 
         let mut np = 0;
 

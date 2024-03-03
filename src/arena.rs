@@ -168,7 +168,7 @@ impl Arenas {
     pub fn best(&self) -> Vec<&Arena> {
         let mut best: Vec<&Arena> = self.arenas.iter().collect();
         best.sort_by(|a, b| a.odds.total_cmp(&b.odds));
-        best.into_iter().take(5).collect()
+        best.into_iter().collect()
     }
 
     /// Returns the IDs of the pirates in the arenas.
