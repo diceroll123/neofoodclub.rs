@@ -351,11 +351,10 @@ impl NeoFoodClub {
     pub fn make_winning_gambit_bets(&self) -> Option<Bets> {
         let winners_binary = self.winners_binary();
 
-        if winners_binary == 0 {
-            return None;
+        match winners_binary {
+            0 => None,
+            _ => Some(self.make_gambit_bets(winners_binary)),
         }
-
-        Some(self.make_gambit_bets(winners_binary))
     }
 
     /// Picks a random full-arena bet and makes a gambit out of it
