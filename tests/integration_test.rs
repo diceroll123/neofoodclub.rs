@@ -261,7 +261,7 @@ mod tests {
         (BET_AMOUNT_MIN..BET_AMOUNT_MAX)
             .into_par_iter() // makes this go from like 1.75s like no time
             .for_each(|amount| {
-                let amounts = vec![amount; 10];
+                let amounts = vec![Some(amount); 10];
                 let hash = math::bet_amounts_to_amounts_hash(&amounts);
                 assert_eq!(
                     math::amounts_hash_to_bet_amounts(&hash),
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn test_bet_amounts_hash_encoding_and_decoding_none() {
         // amount too low, returns None
-        let amounts = vec![BET_AMOUNT_MIN - 1; 10];
+        let amounts = vec![Some(BET_AMOUNT_MIN - 1); 10];
         let hash = math::bet_amounts_to_amounts_hash(&amounts);
         assert_eq!(math::amounts_hash_to_bet_amounts(&hash), vec![None; 10]);
     }

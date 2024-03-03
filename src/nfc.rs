@@ -465,7 +465,8 @@ impl NeoFoodClub {
                 let odds = bets.odds_values(self);
                 let lowest = odds.iter().min().expect("Odds vector is empty, somehow");
 
-                let bet_amounts: Vec<u32> = odds.iter().map(|odd| amount * lowest / odd).collect();
+                let bet_amounts: Vec<Option<u32>> =
+                    odds.iter().map(|odd| Some(amount * lowest / odd)).collect();
 
                 bets.amounts = Some(bet_amounts);
             }
@@ -532,7 +533,7 @@ impl NeoFoodClub {
         for (bet_index, array_index) in bets.array_indices.iter().enumerate() {
             let bet_bin = self.data.bins[*array_index as usize];
             if bet_bin & winners_binary == bet_bin {
-                np += (self.data.odds[*array_index as usize] * bet_amounts[bet_index])
+                np += (self.data.odds[*array_index as usize] * bet_amounts[bet_index].unwrap_or(0))
                     .clamp(0, 1_000_000);
             }
         }

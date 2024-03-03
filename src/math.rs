@@ -159,15 +159,23 @@ pub fn bets_hash_to_bets_count(bets_hash: &str) -> usize {
 
 /// Returns the hash of the given bet amounts.
 /// ```
-/// let hash = neofoodclub::math::bet_amounts_to_amounts_hash(&vec![50, 100, 150, 200, 250]);
+/// let hash = neofoodclub::math::bet_amounts_to_amounts_hash(&vec![Some(50), Some(100), Some(150), Some(200), Some(250)]);
 /// assert_eq!(hash, "AaYAbWAcUAdSAeQ");
+///
+/// let hash = neofoodclub::math::bet_amounts_to_amounts_hash(&vec![None, Some(50), Some(100), Some(150), Some(200), Some(250)]);
+/// assert_eq!(hash, "AaaAaYAbWAcUAdSAeQ");
+///
+/// let hash = neofoodclub::math::bet_amounts_to_amounts_hash(&vec![None, None, None, None, None, None, None, None, None, None]);
+/// assert_eq!(hash, "AaaAaaAaaAaaAaaAaaAaaAaaAaaAaa");
 /// ```
 #[inline]
-pub fn bet_amounts_to_amounts_hash(bet_amounts: &[u32]) -> String {
+pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
     bet_amounts
         .iter()
         .map(|&value| {
-            let mut state = value % BET_AMOUNT_MAX + BET_AMOUNT_MAX;
+            // if the value is None, we'll just use 0
+            // this used to be -1000, but we want to keep it as a u32 which can't go below 0
+            let mut state = value.unwrap_or(0) % BET_AMOUNT_MAX + BET_AMOUNT_MAX;
 
             (0..3)
                 .map(|_| {

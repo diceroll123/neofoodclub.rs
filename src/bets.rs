@@ -9,12 +9,12 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Bets {
     pub array_indices: Vec<u16>,
-    pub amounts: Option<Vec<u32>>,
+    pub amounts: Option<Vec<Option<u32>>>,
     pub odds: Odds,
 }
 
 impl Bets {
-    pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<Vec<u32>>) -> Self {
+    pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<Vec<Option<u32>>>) -> Self {
         if let Some(amounts) = &amounts {
             if amounts.len() != indices.len() {
                 panic!("Bet amounts must be the same length as indices");
@@ -37,7 +37,7 @@ impl Bets {
             return;
         };
 
-        let mut amounts = Vec::<u32>::with_capacity(self.array_indices.len());
+        let mut amounts = Vec::<Option<u32>>::with_capacity(self.array_indices.len());
         for odds in self.odds_values(nfc).iter() {
             let mut div = 1_000_000 / odds;
             let modulo = 1_000_000 % odds;
@@ -47,7 +47,7 @@ impl Bets {
             }
 
             let amount = bet_amount.min(div).max(50);
-            amounts.push(amount);
+            amounts.push(Some(amount));
         }
         self.amounts = Some(amounts);
     }
@@ -164,14 +164,23 @@ impl Bets {
             return false;
         };
 
-        let highest_bet_amount = *amounts.iter().max().unwrap();
+        // if any amounts are None, return false
+        if amounts.iter().any(|a| a.is_none()) {
+            return false;
+        }
+
+        let highest_bet_amount = amounts.iter().max().unwrap().unwrap_or(0);
+
+        if highest_bet_amount == 0 {
+            return false;
+        }
 
         // multiply each odds by each bet amount
         let lowest_winning_bet_amount = self
             .odds_values(nfc)
             .iter()
             .enumerate()
-            .map(|(index, odds)| odds * amounts[index])
+            .map(|(index, odds)| odds * amounts[index].unwrap())
             .min()
             .unwrap();
 
