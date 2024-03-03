@@ -7,15 +7,14 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Bets<'a> {
-    pub nfc: &'a NeoFoodClub,
+pub struct Bets {
     pub array_indices: Vec<u16>,
     pub amounts: Option<Vec<u32>>,
     pub odds: Odds,
 }
 
-impl<'a> Bets<'a> {
-    pub fn new(nfc: &'a NeoFoodClub, indices: Vec<u16>, amounts: Option<Vec<u32>>) -> Self {
+impl Bets {
+    pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<Vec<u32>>) -> Self {
         if let Some(amounts) = &amounts {
             if amounts.len() != indices.len() {
                 panic!("Bet amounts must be the same length as indices");
@@ -23,7 +22,6 @@ impl<'a> Bets<'a> {
         }
 
         Self {
-            nfc,
             array_indices: indices.clone(),
             amounts,
             odds: Odds::new(nfc, indices),
@@ -34,13 +32,13 @@ impl<'a> Bets<'a> {
     /// In short, for each bet we divide 1_000_000 by the odds, and round up.
     /// Then we use whichever is smaller, the bet amount or the result of that equation.
     /// If the result is less than 50, we use 50 instead.
-    pub fn fill_bet_amounts(&mut self) {
-        let Some(bet_amount) = self.nfc.bet_amount else {
+    pub fn fill_bet_amounts(&mut self, nfc: &NeoFoodClub) {
+        let Some(bet_amount) = nfc.bet_amount else {
             return;
         };
 
         let mut amounts = Vec::<u32>::with_capacity(self.array_indices.len());
-        for odds in self.odds_values().iter() {
+        for odds in self.odds_values(nfc).iter() {
             let mut div = 1_000_000 / odds;
             let modulo = 1_000_000 % odds;
 
@@ -55,7 +53,7 @@ impl<'a> Bets<'a> {
     }
 
     /// Creates a new Bets struct from a list of binaries
-    pub fn from_binaries(nfc: &'a NeoFoodClub, binaries: Vec<u32>) -> Self {
+    pub fn from_binaries(nfc: &NeoFoodClub, binaries: Vec<u32>) -> Self {
         let bins = &nfc.data.bins;
 
         let bin_indices: Vec<u16> = bins
@@ -74,7 +72,7 @@ impl<'a> Bets<'a> {
     }
 
     /// Creates a new Bets struct from a hash
-    pub fn from_hash(nfc: &'a NeoFoodClub, hash: &str) -> Self {
+    pub fn from_hash(nfc: &NeoFoodClub, hash: &str) -> Self {
         let binaries = bets_hash_to_bet_binaries(hash);
 
         Self::from_binaries(nfc, binaries)
@@ -92,24 +90,24 @@ impl<'a> Bets<'a> {
 
     /// Returns a nested array of the indices of the pirates in their arenas
     /// making up these bets.
-    pub fn get_indices(&self) -> Vec<[u8; 5]> {
+    pub fn get_indices(&self, nfc: &NeoFoodClub) -> Vec<[u8; 5]> {
         self.array_indices
             .iter()
-            .map(|i| binary_to_indices(self.nfc.data.bins[*i as usize]))
+            .map(|i| binary_to_indices(nfc.data.bins[*i as usize]))
             .collect()
     }
 
     /// Returns the bet binaries
-    pub fn get_binaries(&self) -> Vec<u32> {
+    pub fn get_binaries(&self, nfc: &NeoFoodClub) -> Vec<u32> {
         self.array_indices
             .iter()
-            .map(|i| self.nfc.data.bins[*i as usize])
+            .map(|i| nfc.data.bins[*i as usize])
             .collect()
     }
 
     /// Returns a string of the hash of the bets
-    pub fn bets_hash(&self) -> String {
-        bets_hash_value(self.get_indices())
+    pub fn bets_hash(&self, nfc: &NeoFoodClub) -> String {
+        bets_hash_value(self.get_indices(nfc))
     }
 
     /// Returns a string of the hash of the bet amounts, if it can
@@ -127,9 +125,9 @@ impl<'a> Bets<'a> {
 
     /// Returns whether or not this set is "crazy"
     /// as in, all bets have filled arenas
-    pub fn is_crazy(&self) -> bool {
+    pub fn is_crazy(&self, nfc: &NeoFoodClub) -> bool {
         self.array_indices.iter().all(|i| {
-            let binary = self.nfc.data.bins[*i as usize];
+            let binary = nfc.data.bins[*i as usize];
             binary.count_ones() == 5
         })
     }
@@ -139,12 +137,12 @@ impl<'a> Bets<'a> {
     ///     - The largest integer in the binary representation of the bet set must have five 1's.
     ///     - All bets must be subsets of the largest integer.
     ///     - There must be at least 2 bets.
-    pub fn is_gambit(&self) -> bool {
+    pub fn is_gambit(&self, nfc: &NeoFoodClub) -> bool {
         if self.array_indices.len() < 2 {
             return false;
         }
 
-        let binaries = self.get_binaries();
+        let binaries = self.get_binaries(nfc);
 
         let highest: u32 = *binaries.iter().max().unwrap();
 
@@ -157,7 +155,7 @@ impl<'a> Bets<'a> {
 
     /// Returns whether or not this set is guaranteed to profit.
     /// Must be bustproof, as well.
-    pub fn is_guaranteed_win(&self) -> bool {
+    pub fn is_guaranteed_win(&self, nfc: &NeoFoodClub) -> bool {
         if !self.is_bustproof() {
             return false;
         }
@@ -170,7 +168,7 @@ impl<'a> Bets<'a> {
 
         // multiply each odds by each bet amount
         let lowest_winning_bet_amount = self
-            .odds_values()
+            .odds_values(nfc)
             .iter()
             .enumerate()
             .map(|(index, odds)| odds * amounts[index])
@@ -181,10 +179,10 @@ impl<'a> Bets<'a> {
     }
 
     /// Returns the odds of the bets
-    pub fn odds_values(&self) -> Vec<u32> {
+    pub fn odds_values(&self, nfc: &NeoFoodClub) -> Vec<u32> {
         self.array_indices
             .iter()
-            .map(|i| self.nfc.data.odds[*i as usize])
+            .map(|i| nfc.data.odds[*i as usize])
             .collect()
     }
 }

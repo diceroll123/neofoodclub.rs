@@ -58,7 +58,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        let bets_hash = bets.bets_hash();
+        let bets_hash = bets.bets_hash(&nfc);
 
         let mut binaries = math::bets_hash_to_bet_binaries(&bets_hash);
         binaries.sort_unstable();
@@ -174,7 +174,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        assert!(bets.is_guaranteed_win());
+        assert!(bets.is_guaranteed_win(&nfc));
     }
 
     #[test]
@@ -182,7 +182,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
-        assert!(!bets.is_guaranteed_win());
+        assert!(!bets.is_guaranteed_win(&nfc));
     }
 
     #[test]
@@ -214,7 +214,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        assert!(!bets.is_crazy());
+        assert!(!bets.is_crazy(&nfc));
     }
 
     #[test]
@@ -222,7 +222,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
-        assert!(bets.is_crazy());
+        assert!(bets.is_crazy(&nfc));
     }
 
     #[test]
@@ -230,7 +230,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_maxter_bets();
 
-        assert!(!bets.is_crazy());
+        assert!(!bets.is_crazy(&nfc));
     }
 
     #[test]
@@ -238,13 +238,13 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
-        assert!(!bets.is_gambit());
+        assert!(!bets.is_gambit(&nfc));
 
         let bets = nfc.make_bustproof_bets().unwrap();
-        assert!(!bets.is_gambit());
+        assert!(!bets.is_gambit(&nfc));
 
         let bets = nfc.make_maxter_bets();
-        assert!(!bets.is_gambit());
+        assert!(!bets.is_gambit(&nfc));
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_gambit_bets(0x12481);
 
-        assert!(bets.is_gambit());
+        assert!(bets.is_gambit(&nfc));
     }
 
     #[test]

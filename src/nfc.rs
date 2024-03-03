@@ -296,7 +296,7 @@ impl NeoFoodClub {
         values.truncate(self.max_amount_of_bets());
 
         let mut bets = Bets::new(self, values, None);
-        bets.fill_bet_amounts();
+        bets.fill_bet_amounts(self);
         bets
     }
 
@@ -305,7 +305,7 @@ impl NeoFoodClub {
         let indices = self.max_ter_indices(self.max_amount_of_bets());
 
         let mut bets = Bets::new(self, indices, None);
-        bets.fill_bet_amounts();
+        bets.fill_bet_amounts(self);
         bets
     }
 
@@ -334,7 +334,7 @@ impl NeoFoodClub {
         }
 
         let mut bets = Bets::new(self, indices, None);
-        bets.fill_bet_amounts();
+        bets.fill_bet_amounts(self);
         bets
     }
 
@@ -382,7 +382,7 @@ impl NeoFoodClub {
         crazy_bet_indices.truncate(self.max_amount_of_bets());
 
         let mut bets = Bets::new(self, crazy_bet_indices, None);
-        bets.fill_bet_amounts();
+        bets.fill_bet_amounts(self);
         bets
     }
 
@@ -462,7 +462,7 @@ impl NeoFoodClub {
         // give it bet amounts
         if let Some(mut bets) = bets {
             if let Some(amount) = self.bet_amount {
-                let odds = bets.odds_values();
+                let odds = bets.odds_values(self);
                 let lowest = odds.iter().min().expect("Odds vector is empty, somehow");
 
                 let bet_amounts: Vec<u32> = odds.iter().map(|odd| amount * lowest / odd).collect();
@@ -480,7 +480,7 @@ impl NeoFoodClub {
     pub fn make_bets_from_hash(&self, hash: &str) -> Bets {
         let mut bets = Bets::from_hash(self, hash);
 
-        bets.fill_bet_amounts();
+        bets.fill_bet_amounts(self);
 
         bets
     }
@@ -489,7 +489,7 @@ impl NeoFoodClub {
     pub fn make_bets_from_binaries(&self, binaries: Vec<u32>) -> Bets {
         let mut bets = Bets::from_binaries(self, binaries);
 
-        bets.fill_bet_amounts();
+        bets.fill_bet_amounts(self);
 
         bets
     }
@@ -547,7 +547,7 @@ impl NeoFoodClub {
         let mut url = format!(
             "https://neofood.club/#round={}&b={}",
             self.round(),
-            bets.bets_hash()
+            bets.bets_hash(self)
         );
 
         if let Some(amounts_hash) = bets.amounts_hash() {
