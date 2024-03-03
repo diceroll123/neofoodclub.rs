@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn test_maxter_bets() {
         let nfc = make_test_nfc();
-        let bets = nfc.make_maxter_bets();
+        let bets = nfc.make_max_ter_bets();
 
         assert!(!bets.is_crazy(&nfc));
     }
@@ -243,7 +243,7 @@ mod tests {
         let bets = nfc.make_bustproof_bets().unwrap();
         assert!(!bets.is_gambit(&nfc));
 
-        let bets = nfc.make_maxter_bets();
+        let bets = nfc.make_max_ter_bets();
         assert!(!bets.is_gambit(&nfc));
     }
 

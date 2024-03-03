@@ -301,7 +301,7 @@ impl NeoFoodClub {
     }
 
     /// Creates a Bets object that consists of max-TER bets.
-    pub fn make_maxter_bets(&self) -> Bets {
+    pub fn make_max_ter_bets(&self) -> Bets {
         let indices = self.max_ter_indices(self.max_amount_of_bets());
 
         let mut bets = Bets::new(self, indices, None);
