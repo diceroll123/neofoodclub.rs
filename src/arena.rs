@@ -103,6 +103,11 @@ impl Arena {
     pub fn ratio(&self) -> f64 {
         1. / self.odds - 1.
     }
+
+    /// Returns the pirate by index (0 through 3, inclusive).
+    pub fn get_pirate_by_index(&self, index: u8) -> Option<&Pirate> {
+        self.pirates.get(index as usize)
+    }
 }
 
 #[derive(Debug, Clone)]
