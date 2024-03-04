@@ -58,7 +58,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        let bets_hash = bets.bets_hash(&nfc);
+        let bets_hash = bets.bets_hash();
 
         let mut binaries = math::bets_hash_to_bet_binaries(&bets_hash);
         binaries.sort_unstable();
@@ -214,7 +214,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        assert!(!bets.is_crazy(&nfc));
+        assert!(!bets.is_crazy());
     }
 
     #[test]
@@ -222,7 +222,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
-        assert!(bets.is_crazy(&nfc));
+        assert!(bets.is_crazy());
     }
 
     #[test]
@@ -230,7 +230,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_max_ter_bets();
 
-        assert!(!bets.is_crazy(&nfc));
+        assert!(!bets.is_crazy());
     }
 
     #[test]
@@ -238,13 +238,13 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
-        assert!(!bets.is_gambit(&nfc));
+        assert!(!bets.is_gambit());
 
         let bets = nfc.make_bustproof_bets().unwrap();
-        assert!(!bets.is_gambit(&nfc));
+        assert!(!bets.is_gambit());
 
         let bets = nfc.make_max_ter_bets();
-        assert!(!bets.is_gambit(&nfc));
+        assert!(!bets.is_gambit());
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_gambit_bets(0x12481);
 
-        assert!(bets.is_gambit(&nfc));
+        assert!(bets.is_gambit());
     }
 
     #[test]

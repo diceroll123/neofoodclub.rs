@@ -467,7 +467,7 @@ impl NeoFoodClub {
                 let bet_amounts: Vec<Option<u32>> =
                     odds.iter().map(|odd| Some(amount * lowest / odd)).collect();
 
-                bets.amounts = Some(bet_amounts);
+                bets.bet_amounts = Some(bet_amounts);
             }
 
             return Some(bets);
@@ -517,7 +517,7 @@ impl NeoFoodClub {
     }
 
     pub fn get_win_np(&self, bets: &Bets) -> u32 {
-        let Some(bet_amounts) = bets.amounts.as_ref() else {
+        let Some(bet_amounts) = bets.bet_amounts.as_ref() else {
             return 0;
         };
 
@@ -547,7 +547,7 @@ impl NeoFoodClub {
         let mut url = format!(
             "https://neofood.club/#round={}&b={}",
             self.round(),
-            bets.bets_hash(self)
+            bets.bets_hash()
         );
 
         if let Some(amounts_hash) = bets.amounts_hash() {

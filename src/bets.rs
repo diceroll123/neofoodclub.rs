@@ -1,6 +1,7 @@
 use crate::{
     math::{
         bet_amounts_to_amounts_hash, bets_hash_to_bet_binaries, bets_hash_value, binary_to_indices,
+        pirates_binary,
     },
     nfc::NeoFoodClub,
     odds::Odds,
@@ -9,13 +10,14 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Bets {
     pub array_indices: Vec<u16>,
-    pub amounts: Option<Vec<Option<u32>>>,
+    pub bet_binaries: Vec<u32>,
+    pub bet_amounts: Option<Vec<Option<u32>>>,
     pub odds: Odds,
 }
 
 impl Bets {
     pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<Vec<Option<u32>>>) -> Self {
-        if let Some(amounts) = &amounts {
+        if let Some(amounts) = clean_amounts(&amounts) {
             if amounts.len() != indices.len() {
                 panic!("Bet amounts must be the same length as indices");
             }
@@ -23,9 +25,44 @@ impl Bets {
 
         Self {
             array_indices: indices.clone(),
-            amounts,
+            bet_binaries: indices.iter().map(|i| nfc.data.bins[*i as usize]).collect(),
+            bet_amounts: amounts,
             odds: Odds::new(nfc, indices),
         }
+    }
+
+    pub fn set_bet_amounts(&mut self, amounts: Option<Vec<Option<u32>>>) {
+        if let Some(amounts) = clean_amounts(&amounts) {
+            if amounts.len() != self.array_indices.len() {
+                panic!("Bet amounts must be the same length as indices");
+            }
+        }
+
+        self.bet_amounts = amounts;
+    }
+
+    pub fn net_expected(&self, nfc: &NeoFoodClub) -> f64 {
+        let Some(amounts) = &self.bet_amounts else {
+            return 0.0;
+        };
+
+        self.array_indices
+            .iter()
+            .map(|i| {
+                let index = *i as usize;
+                let bet_amount = amounts[index].unwrap_or(0) as f64;
+                let er = nfc.data.ers[index];
+
+                bet_amount * er - bet_amount
+            })
+            .sum()
+    }
+
+    pub fn expected_return(&self, nfc: &NeoFoodClub) -> f64 {
+        self.array_indices
+            .iter()
+            .map(|i| nfc.data.ers[*i as usize])
+            .sum()
     }
 
     /// Fills the bet amounts in-place with the maximum possible amount to hit 1 million.
@@ -49,7 +86,7 @@ impl Bets {
             let amount = bet_amount.min(div).max(50);
             amounts.push(Some(amount));
         }
-        self.amounts = Some(amounts);
+        self.bet_amounts = Some(amounts);
     }
 
     /// Creates a new Bets struct from a list of binaries
@@ -78,6 +115,13 @@ impl Bets {
         Self::from_binaries(nfc, binaries)
     }
 
+    /// Creates a new Bets struct from pirate indices
+    pub fn from_indices(nfc: &NeoFoodClub, indices: Vec<[u8; 5]>) -> Self {
+        let bins: Vec<u32> = indices.iter().map(|i| pirates_binary(*i)).collect();
+
+        Self::from_binaries(nfc, bins)
+    }
+
     /// Returns the number of bets
     pub fn len(&self) -> usize {
         self.array_indices.len()
@@ -90,29 +134,26 @@ impl Bets {
 
     /// Returns a nested array of the indices of the pirates in their arenas
     /// making up these bets.
-    pub fn get_indices(&self, nfc: &NeoFoodClub) -> Vec<[u8; 5]> {
-        self.array_indices
+    pub fn get_indices(&self) -> Vec<[u8; 5]> {
+        self.bet_binaries
             .iter()
-            .map(|i| binary_to_indices(nfc.data.bins[*i as usize]))
+            .map(|b| binary_to_indices(*b))
             .collect()
     }
 
     /// Returns the bet binaries
-    pub fn get_binaries(&self, nfc: &NeoFoodClub) -> Vec<u32> {
-        self.array_indices
-            .iter()
-            .map(|i| nfc.data.bins[*i as usize])
-            .collect()
+    pub fn get_binaries(&self) -> Vec<u32> {
+        self.bet_binaries.clone()
     }
 
     /// Returns a string of the hash of the bets
-    pub fn bets_hash(&self, nfc: &NeoFoodClub) -> String {
-        bets_hash_value(self.get_indices(nfc))
+    pub fn bets_hash(&self) -> String {
+        bets_hash_value(self.get_indices())
     }
 
     /// Returns a string of the hash of the bet amounts, if it can
     pub fn amounts_hash(&self) -> Option<String> {
-        self.amounts
+        self.bet_amounts
             .as_ref()
             .map(|amounts| bet_amounts_to_amounts_hash(amounts))
     }
@@ -125,11 +166,8 @@ impl Bets {
 
     /// Returns whether or not this set is "crazy"
     /// as in, all bets have filled arenas
-    pub fn is_crazy(&self, nfc: &NeoFoodClub) -> bool {
-        self.array_indices.iter().all(|i| {
-            let binary = nfc.data.bins[*i as usize];
-            binary.count_ones() == 5
-        })
+    pub fn is_crazy(&self) -> bool {
+        self.bet_binaries.iter().all(|bin| bin.count_ones() == 5)
     }
 
     /// Returns whether or not this set is a "gambit" set.
@@ -137,20 +175,18 @@ impl Bets {
     ///     - The largest integer in the binary representation of the bet set must have five 1's.
     ///     - All bets must be subsets of the largest integer.
     ///     - There must be at least 2 bets.
-    pub fn is_gambit(&self, nfc: &NeoFoodClub) -> bool {
+    pub fn is_gambit(&self) -> bool {
         if self.array_indices.len() < 2 {
             return false;
         }
 
-        let binaries = self.get_binaries(nfc);
-
-        let highest: u32 = *binaries.iter().max().unwrap();
+        let highest: u32 = *self.bet_binaries.iter().max().unwrap();
 
         if highest.count_ones() != 5 {
             return false;
         }
 
-        binaries.iter().all(|b| (highest & *b) == *b)
+        self.bet_binaries.iter().all(|b| (highest & *b) == *b)
     }
 
     /// Returns whether or not this set is guaranteed to profit.
@@ -160,7 +196,7 @@ impl Bets {
             return false;
         }
 
-        let Some(amounts) = &self.amounts else {
+        let Some(amounts) = &self.bet_amounts else {
             return false;
         };
 
@@ -193,5 +229,17 @@ impl Bets {
             .iter()
             .map(|i| nfc.data.odds[*i as usize])
             .collect()
+    }
+}
+
+fn clean_amounts(amounts: &Option<Vec<Option<u32>>>) -> Option<Vec<Option<u32>>> {
+    if let Some(amounts) = amounts {
+        let mut cleaned = amounts.clone();
+        while cleaned.last() == Some(&None) {
+            cleaned.pop();
+        }
+        Some(cleaned)
+    } else {
+        None
     }
 }
