@@ -497,6 +497,15 @@ impl NeoFoodClub {
 
         bets
     }
+
+    /// Creates a Bets object translated from a bets indices vector.
+    pub fn make_bets_from_indices(&self, indices: Vec<[u8; 5]>) -> Bets {
+        let mut bets = Bets::from_indices(self, indices);
+
+        bets.fill_bet_amounts(self);
+
+        bets
+    }
 }
 
 impl NeoFoodClub {
