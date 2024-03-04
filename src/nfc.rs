@@ -82,6 +82,10 @@ impl NeoFoodClub {
         }
     }
 
+    pub fn set_bet_amount(&mut self, amount: Option<u32>) {
+        self.bet_amount = amount.map(|x| x.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX));
+    }
+
     pub fn from_json(
         json: &str,
         bet_amount: Option<u32>,
@@ -555,5 +559,23 @@ impl NeoFoodClub {
         }
 
         url
+    }
+
+    pub fn copy(&self) -> NeoFoodClub {
+        let round_data = self.round_data.clone();
+        let bet_amount = self.bet_amount;
+        let arenas = self.arenas.clone();
+        let stds = self.stds;
+        let data = self.data.clone();
+        let modifier = self.modifier.clone();
+
+        NeoFoodClub {
+            round_data,
+            bet_amount,
+            arenas,
+            stds,
+            data,
+            modifier,
+        }
     }
 }
