@@ -70,7 +70,7 @@ pub struct Pirate {
 impl Pirate {
     /// The pirate's bet-binary representation.
     pub fn binary(&self) -> u32 {
-        pirate_binary(self.index + 1, self.arena_id)
+        pirate_binary(self.index, self.arena_id)
     }
 
     /// The pirates positive foods for a given NFC object.

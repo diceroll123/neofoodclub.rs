@@ -52,7 +52,7 @@ impl Arena {
             pirates.push(Pirate {
                 id: p_id,
                 arena_id: id,
-                index: index as u8,
+                index: (index + 1) as u8,
                 current_odds,
                 opening_odds: round_data.openingOdds[id as usize][index + 1],
                 fa,
