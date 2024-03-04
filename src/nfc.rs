@@ -23,11 +23,26 @@ pub struct Change {
 }
 
 #[allow(non_snake_case)]
+#[derive(Debug, Deserialize)]
+struct RoundDataRaw {
+    // as an intermediate step, we use this struct to deserialize the JSON
+    foods: String,
+    round: u16,
+    start: Option<String>,
+    pirates: String,
+    openingOdds: String,
+    currentOdds: String,
+    winners: String,
+    timestamp: Option<String>,
+    lastChange: Option<String>,
+}
+
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RoundData {
     pub(super) foods: Option<[[u8; 10]; 5]>,
     pub(super) round: u16,
-    pub(super) start: String,
+    pub(super) start: Option<String>,
     pub(super) pirates: [[u8; 4]; 5],
     pub(super) currentOdds: [[u8; 5]; 5],
     pub(super) openingOdds: [[u8; 5]; 5],
@@ -119,7 +134,22 @@ impl NeoFoodClub {
                 },
         );
 
-        let round_data: RoundData = serde_qs::from_str(parts[1]).expect("Invalid query string.");
+        let temp: RoundDataRaw = serde_qs::from_str(parts[1]).expect("Invalid query string.");
+
+        let round_data = RoundData {
+            foods: serde_json::from_str(&temp.foods).expect("Invalid foods JSON."),
+            round: temp.round,
+            start: temp.start,
+            pirates: serde_json::from_str(&temp.pirates).expect("Invalid pirates JSON."),
+            openingOdds: serde_json::from_str(&temp.openingOdds)
+                .expect("Invalid openingOdds JSON."),
+            currentOdds: serde_json::from_str(&temp.currentOdds)
+                .expect("Invalid currentOdds JSON."),
+            winners: serde_json::from_str(&temp.winners).expect("Invalid winners JSON."),
+            timestamp: temp.timestamp,
+            changes: None,
+            lastChange: temp.lastChange,
+        };
 
         NeoFoodClub::new(round_data, bet_amount, model, Some(new_modifier))
     }
@@ -170,7 +200,7 @@ impl NeoFoodClub {
         self.round_data.round
     }
 
-    pub fn start(&self) -> String {
+    pub fn start(&self) -> Option<String> {
         self.round_data.start.clone()
     }
 
