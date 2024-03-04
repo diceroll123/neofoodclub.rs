@@ -22,7 +22,7 @@ bitflags! {
 
 #[derive(Debug, Clone, Default)]
 pub struct Modifier {
-    value: i32,
+    pub value: i32,
 }
 
 impl Modifier {

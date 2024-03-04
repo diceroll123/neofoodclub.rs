@@ -3,12 +3,11 @@ use crate::bets::Bets;
 use crate::math::{
     make_round_dicts, pirates_binary, RoundDictData, BET_AMOUNT_MAX, BET_AMOUNT_MIN, BIT_MASKS,
 };
-use crate::modifier::Modifier;
+use crate::modifier::{Modifier, ModifierFlags};
 use crate::utils::argsort_by;
 use itertools::Itertools;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
 
 use crate::models::multinomial_logit::MultinomialLogitModel;
 use crate::models::original::OriginalModel;
@@ -91,15 +90,38 @@ impl NeoFoodClub {
         bet_amount: Option<u32>,
         model: Option<ProbabilityModel>,
         modifier: Option<Modifier>,
-    ) -> Result<NeoFoodClub> {
-        let round_data: Result<RoundData> = serde_json::from_str(json);
-        match round_data {
-            Ok(round_data) => Ok(NeoFoodClub::new(round_data, bet_amount, model, modifier)),
-            Err(e) => {
-                println!("Error: {}", e);
-                Err(e)
-            }
+    ) -> NeoFoodClub {
+        let round_data: RoundData = serde_json::from_str(json).expect("Invalid JSON.");
+
+        NeoFoodClub::new(round_data, bet_amount, model, modifier)
+    }
+
+    pub fn from_url(
+        url: &str,
+        bet_amount: Option<u32>,
+        model: Option<ProbabilityModel>,
+        modifier: Option<Modifier>,
+    ) -> NeoFoodClub {
+        let parts = url.split('#').collect::<Vec<&str>>();
+
+        if parts.len() != 2 {
+            panic!("No relevant NeoFoodClub-like URL data found.");
         }
+
+        let use_modifier = modifier.unwrap_or_default();
+        let cc_perk = parts[0].ends_with("/15/") || use_modifier.is_charity_corner();
+        let new_modifier = Modifier::new(
+            use_modifier.value
+                | if cc_perk {
+                    ModifierFlags::CHARITY_CORNER.bits()
+                } else {
+                    0
+                },
+        );
+
+        let round_data: RoundData = serde_qs::from_str(parts[1]).expect("Invalid query string.");
+
+        NeoFoodClub::new(round_data, bet_amount, model, Some(new_modifier))
     }
 }
 
@@ -174,6 +196,10 @@ impl NeoFoodClub {
 
     pub fn foods(&self) -> Option<[[u8; 10]; 5]> {
         self.round_data.foods
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(&self.round_data).expect("Failed to serialize to JSON.")
     }
 }
 
@@ -588,8 +614,11 @@ impl NeoFoodClub {
 impl NeoFoodClub {
     // URL-related stuff
     pub fn make_url(&self, bets: &Bets) -> String {
+        let use_15 = self.modifier.is_charity_corner() || bets.len() > 10;
+
         let mut url = format!(
-            "https://neofood.club/#round={}&b={}",
+            "https://neofood.club/{}#round={}&b={}",
+            if use_15 { "15/" } else { "" },
             self.round(),
             bets.bets_hash()
         );
