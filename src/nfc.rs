@@ -1,7 +1,7 @@
 use crate::arena::Arenas;
 use crate::bets::Bets;
 use crate::math::{
-    make_round_dicts, pirates_binary, RoundDictData, BET_AMOUNT_MAX, BET_AMOUNT_MIN,
+    make_round_dicts, pirates_binary, RoundDictData, BET_AMOUNT_MAX, BET_AMOUNT_MIN, BIT_MASKS,
 };
 use crate::modifier::Modifier;
 use crate::utils::argsort_by;
@@ -478,6 +478,37 @@ impl NeoFoodClub {
         }
 
         None
+    }
+
+    pub fn make_tenbet_bets(&self, pirates_binary: u32) -> Bets {
+        let mut amount_of_pirates = 0;
+        for mask in BIT_MASKS.iter() {
+            amount_of_pirates += (pirates_binary & mask).count_ones();
+        }
+
+        if amount_of_pirates == 0 {
+            panic!("You must pick at least 1 pirate, and at most 3.");
+        }
+
+        if amount_of_pirates > 3 {
+            panic!("You must pick 3 pirates at most.");
+        }
+
+        let max_ter_indices = self.max_ter_indices(3124);
+
+        let mut bins = Vec::with_capacity(self.max_amount_of_bets());
+
+        for index in max_ter_indices.iter() {
+            let bin = self.data.bins[*index as usize];
+            if bin & pirates_binary == bin {
+                bins.push(bin);
+                if bins.len() == bins.capacity() {
+                    break;
+                }
+            }
+        }
+
+        Bets::from_binaries(self, bins)
     }
 
     /// Creates a Bets object translated from a bets hash.
