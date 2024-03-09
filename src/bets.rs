@@ -91,18 +91,19 @@ impl Bets {
 
     /// Creates a new Bets struct from a list of binaries
     pub fn from_binaries(nfc: &NeoFoodClub, binaries: Vec<u32>) -> Self {
-        let bins = &nfc.data.bins;
-
-        let bin_indices: Vec<u16> = bins
+        // maintaining the order of the binaries is important, at the cost of some performance
+        let bin_index_map: std::collections::HashMap<u32, u16> = nfc
+            .data
+            .bins
             .iter()
             .enumerate()
-            .filter_map(|(i, b)| {
-                if binaries.contains(b) {
-                    Some(i as u16)
-                } else {
-                    None
-                }
-            })
+            .map(|(i, &bin)| (bin, i as u16))
+            .collect();
+
+        let bin_indices: Vec<u16> = binaries
+            .iter()
+            .filter_map(|b| bin_index_map.get(b))
+            .cloned()
             .collect();
 
         Self::new(nfc, bin_indices, None)
