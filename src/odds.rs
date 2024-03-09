@@ -24,8 +24,9 @@ pub struct Odds {
 
 impl Odds {
     pub fn new(nfc: &NeoFoodClub, array_indices: Vec<u16>) -> Self {
-        let mut pirate_indices = Vec::<[u8; 5]>::with_capacity(array_indices.len());
-        let mut odds_values = Vec::<u32>::with_capacity(array_indices.len());
+        let amount_of_bets = array_indices.len();
+        let mut pirate_indices = Vec::<[u8; 5]>::with_capacity(amount_of_bets);
+        let mut odds_values = Vec::<u32>::with_capacity(amount_of_bets);
 
         for index in array_indices.iter() {
             pirate_indices.push(binary_to_indices(nfc.data.bins[*index as usize]));
@@ -47,7 +48,6 @@ impl Odds {
             }
         });
 
-        let amount_of_bets = array_indices.len() as u32;
         let most_likely_winner = chances
             .iter()
             .max_by(|a, b| a.probability.total_cmp(&b.probability))
@@ -56,7 +56,7 @@ impl Odds {
 
         let partial_rate = chances
             .iter()
-            .filter(|o| 0 < o.value && o.value < amount_of_bets)
+            .filter(|o| 0 < o.value && o.value < amount_of_bets as u32)
             .map(|o| o.probability)
             .sum();
 
