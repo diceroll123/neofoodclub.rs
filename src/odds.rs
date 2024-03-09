@@ -37,7 +37,7 @@ impl Odds {
 
         let best = chances
             .last()
-            .expect("Chances vector is empty, somehow")
+            .expect("Chances vector should not be empty")
             .clone();
 
         let bust = chances.first().and_then(|bust_chance| {
@@ -51,7 +51,7 @@ impl Odds {
         let most_likely_winner = chances
             .iter()
             .max_by(|a, b| a.probability.total_cmp(&b.probability))
-            .expect("Chances vector is empty, somehow")
+            .expect("Chances vector should not be empty")
             .clone();
 
         let partial_rate = chances
