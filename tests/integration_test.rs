@@ -318,4 +318,22 @@ mod tests {
 
         assert_eq!(bets.bets_hash(), crazy_hash);
     }
+
+    #[test]
+    fn test_bet_amount_setting() {
+        let mut nfc = make_test_nfc();
+        nfc.bet_amount = Some(1000);
+
+        assert_eq!(nfc.bet_amount, Some(1000));
+    }
+
+    #[test]
+    fn test_bet_amount_setting_with_bets() {
+        let mut nfc = make_test_nfc();
+        nfc.bet_amount = Some(1000);
+
+        let bets = nfc.make_winning_gambit_bets().unwrap();
+
+        assert_eq!(bets.bet_amounts, Some(vec![Some(1000); 10]));
+    }
 }
