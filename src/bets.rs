@@ -1,11 +1,40 @@
 use crate::{
     math::{
-        bet_amounts_to_amounts_hash, bets_hash_to_bet_binaries, bets_hash_value, binary_to_indices,
-        pirates_binary,
+        amounts_hash_to_bet_amounts, bet_amounts_to_amounts_hash, bets_hash_to_bet_binaries,
+        bets_hash_value, binary_to_indices, pirates_binary,
     },
     nfc::NeoFoodClub,
     odds::Odds,
 };
+
+#[derive(Debug, Clone)]
+pub enum BetAmount {
+    AmountHash(String),
+    Amounts(Vec<Option<u32>>),
+    Amount(u32),
+    None,
+}
+
+impl BetAmount {
+    pub fn to_vec(&self) -> Option<Vec<Option<u32>>> {
+        match self {
+            BetAmount::AmountHash(hash) => {
+                Some(Self::clean_amounts(amounts_hash_to_bet_amounts(hash)))
+            }
+            BetAmount::Amounts(amounts) => Some(Self::clean_amounts(amounts.clone())),
+            BetAmount::Amount(amount) => Some(vec![Some(*amount)]),
+            BetAmount::None => None,
+        }
+    }
+
+    fn clean_amounts(amounts: Vec<Option<u32>>) -> Vec<Option<u32>> {
+        let mut cleaned = amounts.clone();
+        while cleaned.last() == Some(&None) {
+            cleaned.pop();
+        }
+        cleaned
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Bets {
@@ -16,29 +45,36 @@ pub struct Bets {
 }
 
 impl Bets {
-    pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<Vec<Option<u32>>>) -> Self {
-        if let Some(amounts) = clean_amounts(&amounts) {
-            if amounts.len() != indices.len() {
-                panic!("Bet amounts must be the same length as indices");
-            }
-        }
-
-        Self {
+    pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<BetAmount>) -> Self {
+        let mut bets = Self {
             array_indices: indices.clone(),
             bet_binaries: indices.iter().map(|i| nfc.data.bins[*i as usize]).collect(),
-            bet_amounts: amounts,
+            bet_amounts: None,
             odds: Odds::new(nfc, indices),
-        }
+        };
+
+        bets.set_bet_amounts(&amounts);
+
+        bets
     }
 
-    pub fn set_bet_amounts(&mut self, amounts: Option<Vec<Option<u32>>>) {
-        if let Some(amounts) = clean_amounts(&amounts) {
-            if amounts.len() != self.array_indices.len() {
-                panic!("Bet amounts must be the same length as indices");
+    pub fn set_bet_amounts(&mut self, amounts: &Option<BetAmount>) {
+        match amounts {
+            Some(betamount) => {
+                let amounts = betamount.to_vec();
+
+                if let Some(amounts) = &amounts {
+                    if amounts.len() != self.array_indices.len() {
+                        panic!("Bet amounts must be the same length as bet indices, or None");
+                    }
+                }
+
+                self.bet_amounts = amounts;
+            }
+            None => {
+                self.bet_amounts = None;
             }
         }
-
-        self.bet_amounts = amounts;
     }
 
     pub fn net_expected(&self, nfc: &NeoFoodClub) -> f64 {
@@ -230,17 +266,5 @@ impl Bets {
             .iter()
             .map(|i| nfc.data.odds[*i as usize])
             .collect()
-    }
-}
-
-fn clean_amounts(amounts: &Option<Vec<Option<u32>>>) -> Option<Vec<Option<u32>>> {
-    if let Some(amounts) = amounts {
-        let mut cleaned = amounts.clone();
-        while cleaned.last() == Some(&None) {
-            cleaned.pop();
-        }
-        Some(cleaned)
-    } else {
-        None
     }
 }
