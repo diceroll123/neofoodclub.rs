@@ -307,4 +307,15 @@ mod tests {
 
         assert_eq!(nfc.winners(), [1, 3, 4, 2, 4]);
     }
+
+    #[test]
+    fn test_bet_hash_encoding() {
+        let crazy_hash = "ltqvqwgimhqtvrnywrwvijwnn";
+
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_bets_from_hash(crazy_hash);
+
+        assert_eq!(bets.bets_hash(), crazy_hash);
+    }
 }
