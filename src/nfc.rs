@@ -542,24 +542,24 @@ impl NeoFoodClub {
         None
     }
 
-    pub fn make_tenbet_bets(&self, pirates_binary: u32) -> Result<Bets, &str> {
+    pub fn make_tenbet_bets(&self, pirates_binary: u32) -> Result<Bets, String> {
         let mut amount_of_pirates = 0;
         for mask in BIT_MASKS.iter() {
             let arena_pirates = (pirates_binary & mask).count_ones();
 
             if arena_pirates > 1 {
-                return Err("You can only pick 1 pirate per arena.");
+                return Err("You can only pick 1 pirate per arena.".to_string());
             }
 
             amount_of_pirates += arena_pirates;
         }
 
         if amount_of_pirates == 0 {
-            return Err("You must pick at least 1 pirate, and at most 3.");
+            return Err("You must pick at least 1 pirate, and at most 3.".to_string());
         }
 
         if amount_of_pirates > 3 {
-            return Err("You must pick 3 pirates at most.");
+            return Err("You must pick 3 pirates at most.".to_string());
         }
 
         let max_ter_indices = self.max_ter_indices(3124);
