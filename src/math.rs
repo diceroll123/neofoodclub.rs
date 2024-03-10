@@ -389,26 +389,6 @@ pub struct RoundDictData {
     pub maxbets: Vec<u32>,
 }
 
-impl RoundDictData {
-    /// Returns a "clamped" array of the bet amounts passed in where the minimum value is 50 and
-    /// the maximum value is 70304, which is the highest value that the current hashing algorithm can understand.
-    pub fn fix_maxbet_amounts(&self) -> Vec<u32> {
-        self.maxbets
-            .iter()
-            .map(|x| *x.max(&BET_AMOUNT_MIN).min(&BET_AMOUNT_MAX))
-            .collect()
-    }
-
-    /// Returns a "clamped" array of the bet amounts passed in where the minimum value is 50 and
-    /// the maximum value is the max_bet passed in.
-    pub fn clamp_to_maxbet(&self, max_bet: u32) -> Vec<u32> {
-        self.maxbets
-            .iter()
-            .map(|x| *x.max(&BET_AMOUNT_MIN).min(&max_bet))
-            .collect()
-    }
-}
-
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
     // the first iteration is an empty bet, so we skip it with skip(1)
     let nums: Vec<(u32, f64, u32, f64, u32)> = iproduct!(0..5, 0..5, 0..5, 0..5, 0..5)
