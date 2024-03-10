@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bitflags::bitflags;
 
 bitflags! {
@@ -23,11 +25,12 @@ bitflags! {
 #[derive(Debug, Clone, Default)]
 pub struct Modifier {
     pub value: i32,
+    pub custom_odds: Option<HashMap<u8, u8>>,
 }
 
 impl Modifier {
-    pub fn new(value: i32) -> Self {
-        Self { value }
+    pub fn new(value: i32, custom_odds: Option<HashMap<u8, u8>>) -> Self {
+        Self { value, custom_odds }
     }
 }
 
