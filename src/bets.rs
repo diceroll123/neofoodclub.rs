@@ -69,22 +69,26 @@ impl Bets {
     }
 
     pub fn set_bet_amounts(&mut self, amounts: &Option<BetAmounts>) {
-        match amounts {
-            Some(betamount) => {
-                let amounts = betamount.to_vec();
+        let Some(betamount) = amounts else {
+            self.bet_amounts = None;
+            return;
+        };
 
-                if let Some(amounts) = &amounts {
-                    if amounts.len() != self.array_indices.len() {
-                        panic!("Bet amounts must be the same length as bet indices, or None");
-                    }
-                }
+        let Some(amounts) = betamount.to_vec() else {
+            self.bet_amounts = None;
+            return;
+        };
 
-                self.bet_amounts = amounts;
-            }
-            None => {
-                self.bet_amounts = None;
-            }
+        if amounts.len() != self.array_indices.len() {
+            panic!("Bet amounts must be the same length as bet indices, or None");
         }
+
+        self.bet_amounts = Some(
+            amounts
+                .iter()
+                .map(|x| x.map(|x| x.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX)))
+                .collect(),
+        );
     }
 
     pub fn net_expected(&self, nfc: &NeoFoodClub) -> f64 {
