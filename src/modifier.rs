@@ -34,27 +34,31 @@ impl Modifier {
 impl Modifier {
     // flags
 
-    fn has_flag(&self, flag: i32) -> bool {
-        self.value & flag == flag
-    }
-
     pub fn is_empty(&self) -> bool {
-        self.has_flag(ModifierFlags::EMPTY.bits())
+        ModifierFlags::from_bits(self.value).unwrap().is_empty()
     }
 
     pub fn is_general(&self) -> bool {
-        self.has_flag(ModifierFlags::GENERAL.bits())
+        ModifierFlags::from_bits(self.value)
+            .unwrap()
+            .contains(ModifierFlags::GENERAL)
     }
 
     pub fn is_opening_odds(&self) -> bool {
-        self.has_flag(ModifierFlags::OPENING_ODDS.bits())
+        ModifierFlags::from_bits(self.value)
+            .unwrap()
+            .contains(ModifierFlags::OPENING_ODDS)
     }
 
     pub fn is_reverse(&self) -> bool {
-        self.has_flag(ModifierFlags::REVERSE.bits())
+        ModifierFlags::from_bits(self.value)
+            .unwrap()
+            .contains(ModifierFlags::REVERSE)
     }
 
     pub fn is_charity_corner(&self) -> bool {
-        self.has_flag(ModifierFlags::CHARITY_CORNER.bits())
+        ModifierFlags::from_bits(self.value)
+            .unwrap()
+            .contains(ModifierFlags::CHARITY_CORNER)
     }
 }
