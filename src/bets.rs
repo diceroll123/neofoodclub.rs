@@ -84,12 +84,11 @@ impl Bets {
 
         self.array_indices
             .iter()
-            .map(|i| {
-                let index = *i as usize;
-                let bet_amount = amounts[index].unwrap_or(0) as f64;
-                let er = nfc.data.ers[index];
-
-                bet_amount * er - bet_amount
+            .zip(amounts.iter())
+            .map(|(i, a)| {
+                let er = nfc.data.ers[*i as usize];
+                let amount = a.unwrap_or(0) as f64;
+                er * amount
             })
             .sum()
     }
