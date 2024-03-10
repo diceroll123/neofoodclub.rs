@@ -9,7 +9,7 @@ use crate::{
     odds::Odds,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BetAmounts {
     AmountHash(String),
     Amounts(Vec<Option<u32>>),
@@ -29,7 +29,7 @@ impl BetAmounts {
 
     pub fn from_amount(amount: u32, length: usize) -> Self {
         if length == 0 {
-            panic!("Length must be greater than 0");
+            return BetAmounts::None;
         }
 
         if amount > BET_AMOUNT_MAX || amount <= BET_AMOUNT_MIN {

@@ -28,7 +28,7 @@ mod tests {
 
     use core::panic;
 
-    use neofoodclub::pirates::PartialPirateThings;
+    use neofoodclub::{bets::BetAmounts, pirates::PartialPirateThings};
     use rayon::prelude::*;
 
     use super::*;
@@ -580,7 +580,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
-        assert_eq!(bets.len(), 10);
+        assert_eq!(bets.unwrap().len(), 10);
     }
 
     #[test]
@@ -588,7 +588,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
-        assert!(!bets.is_empty());
+        assert!(!bets.unwrap().is_empty());
     }
 
     #[test]
@@ -596,7 +596,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
-        let binaries = bets.get_binaries();
+        let binaries = bets.unwrap().get_binaries();
 
         assert_eq!(binaries.len(), 10);
     }
@@ -610,17 +610,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_make_tenbet_bets_zero_pirates() {
         let nfc = make_test_nfc();
-        nfc.make_tenbet_bets(0);
+        assert!(nfc.make_tenbet_bets(0).is_err());
     }
 
     #[test]
-    #[should_panic]
     fn test_make_tenbet_bets_too_many_pirates() {
         let nfc = make_test_nfc();
-        nfc.make_tenbet_bets(0x8888888);
+        assert!(nfc.make_tenbet_bets(0x8888888).is_err());
     }
 
     #[test]
@@ -671,9 +669,11 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_bets_set_bet_amounts_zero_length() {
-        neofoodclub::bets::BetAmounts::from_amount(8000, 0);
+        assert_eq!(
+            neofoodclub::bets::BetAmounts::from_amount(8000, 0),
+            BetAmounts::None
+        );
     }
 
     #[test]

@@ -542,18 +542,24 @@ impl NeoFoodClub {
         None
     }
 
-    pub fn make_tenbet_bets(&self, pirates_binary: u32) -> Bets {
+    pub fn make_tenbet_bets(&self, pirates_binary: u32) -> Result<Bets, &str> {
         let mut amount_of_pirates = 0;
         for mask in BIT_MASKS.iter() {
-            amount_of_pirates += (pirates_binary & mask).count_ones();
+            let arena_pirates = (pirates_binary & mask).count_ones();
+
+            if arena_pirates > 1 {
+                return Err("You can only pick 1 pirate per arena.");
+            }
+
+            amount_of_pirates += arena_pirates;
         }
 
         if amount_of_pirates == 0 {
-            panic!("You must pick at least 1 pirate, and at most 3.");
+            return Err("You must pick at least 1 pirate, and at most 3.");
         }
 
         if amount_of_pirates > 3 {
-            panic!("You must pick 3 pirates at most.");
+            return Err("You must pick 3 pirates at most.");
         }
 
         let max_ter_indices = self.max_ter_indices(3124);
@@ -570,7 +576,7 @@ impl NeoFoodClub {
             }
         }
 
-        Bets::from_binaries(self, bins)
+        Ok(Bets::from_binaries(self, bins))
     }
 
     /// Creates a Bets object translated from a bets hash.
