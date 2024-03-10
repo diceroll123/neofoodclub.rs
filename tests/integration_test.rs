@@ -28,6 +28,7 @@ mod tests {
 
     use core::panic;
 
+    use neofoodclub::pirates::PartialPirateThings;
     use rayon::prelude::*;
 
     use super::*;
@@ -335,5 +336,399 @@ mod tests {
         let bets = nfc.make_winning_gambit_bets().unwrap();
 
         assert_eq!(bets.bet_amounts, Some(vec![Some(1000); 10]));
+    }
+
+    #[test]
+    fn test_arena_ratio() {
+        let nfc = make_test_nfc();
+
+        let ratio = nfc.arenas.get_arena(0).unwrap().ratio();
+
+        assert!(ratio < 0.0);
+    }
+
+    #[test]
+    fn test_arena_is_negative() {
+        let nfc = make_test_nfc();
+
+        let arena = nfc.arenas.get_arena(0).unwrap();
+
+        assert!(arena.is_negative());
+    }
+
+    #[test]
+    fn test_arena_name() {
+        let nfc = make_test_nfc();
+
+        let arena = nfc.arenas.get_arena(0).unwrap();
+
+        assert_eq!(arena.get_name(), "Shipwreck");
+    }
+
+    #[test]
+    fn test_arena_ids() {
+        let nfc = make_test_nfc();
+
+        let arena = nfc.arenas.get_arena(0).unwrap();
+
+        assert_eq!(arena.ids(), [6, 11, 4, 3]);
+    }
+
+    #[test]
+    fn test_arena_get_pirate_by_index() {
+        let nfc = make_test_nfc();
+
+        let arena = nfc.arenas.get_arena(0).unwrap();
+
+        let pirate = arena.get_pirate_by_index(0).unwrap();
+
+        assert_eq!(pirate.id, 6);
+    }
+
+    #[test]
+    fn test_arenas_get_pirate_by_id() {
+        let nfc = make_test_nfc();
+
+        let pirate = nfc.arenas.get_pirate_by_id(1).unwrap();
+
+        assert_eq!(pirate.get_name(), "Dan");
+    }
+
+    #[test]
+    fn test_arenas_get_pirates_by_id() {
+        let nfc = make_test_nfc();
+
+        let pirates = nfc.arenas.get_pirates_by_id(&[1, 2, 3]);
+
+        assert_eq!(pirates[0].get_name(), "Dan");
+        assert_eq!(pirates[1].get_name(), "Sproggie");
+        assert_eq!(pirates[2].get_name(), "Orvinn");
+    }
+
+    #[test]
+    fn test_arenas_get_all_pirates_flat() {
+        let nfc = make_test_nfc();
+
+        let pirates = nfc.arenas.get_all_pirates_flat();
+
+        assert_eq!(pirates.len(), 20);
+    }
+
+    #[test]
+    fn test_arenas_get_pirates_from_binary() {
+        let nfc = make_test_nfc();
+
+        let pirates = nfc.arenas.get_pirates_from_binary(0x12480);
+
+        assert_eq!(pirates.len(), 4);
+
+        assert_eq!(pirates[0].get_name(), "Orvinn");
+        assert_eq!(pirates[1].get_name(), "Sproggie");
+        assert_eq!(pirates[2].get_name(), "Franchisco");
+        assert_eq!(pirates[3].get_name(), "Dan");
+    }
+
+    #[test]
+    fn test_arenas_get_all_pirates() {
+        let nfc = make_test_nfc();
+
+        let pirates = nfc.arenas.get_all_pirates();
+
+        assert_eq!(pirates.len(), 5);
+    }
+
+    #[test]
+    fn test_arenas_best() {
+        let nfc = make_test_nfc();
+
+        let best = nfc.arenas.best();
+
+        assert_eq!(best[0].get_name(), "Lagoon");
+        assert_eq!(best[1].get_name(), "Hidden");
+        assert_eq!(best[2].get_name(), "Harpoon");
+        assert_eq!(best[3].get_name(), "Shipwreck");
+        assert_eq!(best[4].get_name(), "Treasure");
+    }
+
+    #[test]
+    fn test_arenas_pirate_ids() {
+        let nfc = make_test_nfc();
+
+        let ids = nfc.arenas.pirate_ids();
+
+        assert_eq!(ids[0], &[6, 11, 4, 3]);
+    }
+
+    #[test]
+    fn test_partial_pirate_get_image() {
+        let nfc = make_test_nfc();
+
+        let pirate = nfc.arenas.get_pirate_by_id(1).unwrap();
+
+        assert_eq!(
+            pirate.get_image(),
+            "http://images.neopets.com/pirates/fc/fc_pirate_1.gif"
+        );
+    }
+
+    #[test]
+    fn test_pirate_positive_foods() {
+        let nfc = make_test_nfc();
+
+        let pirate = nfc.arenas.get_pirate_by_id(1).unwrap();
+
+        let foods = pirate.positive_foods(&nfc).unwrap();
+
+        assert_eq!(foods, [12, 6]);
+    }
+
+    #[test]
+    fn test_pirate_positive_foods_none() {
+        let nfc = make_test_nfc();
+
+        let pirate = nfc.arenas.get_pirate_by_id(4).unwrap();
+
+        let foods = pirate.positive_foods(&nfc);
+
+        assert_eq!(foods, None);
+    }
+
+    #[test]
+    fn test_pirate_negative_foods_none() {
+        let nfc = make_test_nfc();
+
+        let pirate = nfc.arenas.get_pirate_by_id(1).unwrap();
+
+        let foods = pirate.negative_foods(&nfc);
+
+        assert_eq!(foods, None);
+    }
+
+    #[test]
+    fn test_pirate_negative_foods() {
+        let nfc = make_test_nfc();
+
+        let pirate = nfc.arenas.get_pirate_by_id(2).unwrap();
+
+        let foods = pirate.negative_foods(&nfc).unwrap();
+
+        assert_eq!(foods, [40, 25]);
+    }
+
+    #[test]
+    fn test_bets_hash_to_bets_count() {
+        let bets_hash = "aukacfukycuulacauutcbukdc";
+        let bets = math::bets_hash_to_bets_count(bets_hash);
+
+        assert_eq!(bets, 10);
+    }
+
+    #[test]
+    fn test_bets_indices_to_bet_binaries() {
+        let bins = neofoodclub::math::bets_indices_to_bet_binaries(vec![
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0],
+        ]);
+        assert_eq!(bins, vec![0x80000, 0x8000, 0x800, 0x80, 0x8, 0x80000]);
+    }
+
+    #[test]
+    fn test_make_best_gambit_bets() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_best_gambit_bets();
+
+        assert!(bets.is_gambit());
+    }
+
+    #[test]
+    fn test_make_random_gambit_bets() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_random_gambit_bets();
+
+        assert!(bets.is_gambit());
+    }
+
+    #[test]
+    fn test_make_random_bets() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_random_bets();
+
+        assert_eq!(bets.len(), nfc.max_amount_of_bets());
+    }
+
+    #[test]
+    fn test_make_all_bets() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_all_bets();
+
+        assert_eq!(bets.len(), 3124);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_make_gambit_bets_broken() {
+        let nfc = make_test_nfc();
+        nfc.make_gambit_bets(0x12480);
+    }
+
+    #[test]
+    fn test_make_tenbet_bets() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_tenbet_bets(0x88800);
+
+        assert_eq!(bets.len(), 10);
+    }
+
+    #[test]
+    fn test_bets_is_empty() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_tenbet_bets(0x88800);
+
+        assert!(!bets.is_empty());
+    }
+
+    #[test]
+    fn test_bets_get_binaries() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_tenbet_bets(0x88800);
+
+        let binaries = bets.get_binaries();
+
+        assert_eq!(binaries.len(), 10);
+    }
+
+    #[test]
+    fn test_nfc_winning_pirates() {
+        let nfc = make_test_nfc();
+        let pirates = nfc.winning_pirates().unwrap();
+
+        assert_eq!(pirates.len(), 5);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_make_tenbet_bets_zero_pirates() {
+        let nfc = make_test_nfc();
+        nfc.make_tenbet_bets(0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_make_tenbet_bets_too_many_pirates() {
+        let nfc = make_test_nfc();
+        nfc.make_tenbet_bets(0x8888888);
+    }
+
+    #[test]
+    fn test_bets_expected_return() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_max_ter_bets();
+
+        assert!(bets.expected_return(&nfc) > 17.0);
+    }
+
+    #[test]
+    fn test_bets_net_expected() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_max_ter_bets();
+
+        assert!(bets.net_expected(&nfc) > 136316.0);
+    }
+
+    #[test]
+    fn test_bets_net_expected_no_bet_amount() {
+        let mut nfc = make_test_nfc();
+        nfc.bet_amount = None;
+        let bets = nfc.make_max_ter_bets();
+
+        assert_eq!(bets.net_expected(&nfc), 0.00);
+    }
+
+    #[test]
+    fn test_bets_set_bet_amounts() {
+        let nfc = make_test_nfc();
+        let mut bets = nfc.make_max_ter_bets();
+
+        let amounts = neofoodclub::bets::BetAmounts::from_amount(8000, bets.len());
+        bets.set_bet_amounts(&Some(amounts));
+
+        assert_eq!(bets.bet_amounts, Some(vec![Some(8000); 10]));
+    }
+
+    #[test]
+    fn test_bets_set_bet_amounts_zero() {
+        let nfc = make_test_nfc();
+        let mut bets = nfc.make_max_ter_bets();
+
+        let amounts = neofoodclub::bets::BetAmounts::from_amount(0, bets.len());
+        bets.set_bet_amounts(&Some(amounts));
+
+        assert_eq!(bets.bet_amounts, None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_bets_set_bet_amounts_zero_length() {
+        neofoodclub::bets::BetAmounts::from_amount(8000, 0);
+    }
+
+    #[test]
+    fn test_betamounts_to_vec_with_hash() {
+        let amounts =
+            neofoodclub::bets::BetAmounts::AmountHash("EmxCoKCoKCglDKUCYqEXkByWBpqzGO".to_owned());
+        assert_eq!(
+            amounts.to_vec(),
+            Some(vec![
+                Some(11463),
+                Some(6172),
+                Some(6172),
+                Some(5731),
+                Some(10030),
+                Some(8024),
+                Some(13374),
+                Some(4000),
+                Some(3500),
+            ])
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_amounts_hash_to_bet_amounts_invalid() {
+        math::amounts_hash_to_bet_amounts("🎲");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_bets_hash_to_bets_count_invalid() {
+        math::bets_hash_to_bets_count("🎲");
+    }
+
+    #[test]
+    fn test_make_bets_from_binaries() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_bets_from_binaries(vec![0x80000, 0x8000, 0x800, 0x80, 0x8, 0x80000]);
+
+        assert_eq!(bets.len(), 6);
+    }
+
+    #[test]
+    fn test_make_bets_from_indices() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_bets_from_indices(vec![[0, 1, 2, 3, 4]]);
+
+        assert_eq!(bets.len(), 1);
+    }
+
+    #[test]
+    fn test_nfc_copy() {
+        let nfc = make_test_nfc();
+        let new_nfc = nfc.copy();
+
+        assert_eq!(nfc.round(), new_nfc.round());
     }
 }

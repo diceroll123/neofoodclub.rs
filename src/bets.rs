@@ -1,30 +1,40 @@
 use crate::{
     math::{
         amounts_hash_to_bet_amounts, bet_amounts_to_amounts_hash, bets_hash_to_bet_binaries,
-        bets_hash_value, binary_to_indices, pirates_binary,
+        bets_hash_value, binary_to_indices, pirates_binary, BET_AMOUNT_MAX, BET_AMOUNT_MIN,
     },
     nfc::NeoFoodClub,
     odds::Odds,
 };
 
 #[derive(Debug, Clone)]
-pub enum BetAmount {
+pub enum BetAmounts {
     AmountHash(String),
     Amounts(Vec<Option<u32>>),
-    Amount(u32),
     None,
 }
 
-impl BetAmount {
+impl BetAmounts {
     pub fn to_vec(&self) -> Option<Vec<Option<u32>>> {
         match self {
-            BetAmount::AmountHash(hash) => {
+            BetAmounts::AmountHash(hash) => {
                 Some(Self::clean_amounts(amounts_hash_to_bet_amounts(hash)))
             }
-            BetAmount::Amounts(amounts) => Some(Self::clean_amounts(amounts.clone())),
-            BetAmount::Amount(amount) => Some(vec![Some(*amount)]),
-            BetAmount::None => None,
+            BetAmounts::Amounts(amounts) => Some(Self::clean_amounts(amounts.clone())),
+            BetAmounts::None => None,
         }
+    }
+
+    pub fn from_amount(amount: u32, length: usize) -> Self {
+        if length == 0 {
+            panic!("Length must be greater than 0");
+        }
+
+        if amount > BET_AMOUNT_MAX || amount <= BET_AMOUNT_MIN {
+            return BetAmounts::None;
+        }
+
+        BetAmounts::Amounts(vec![Some(amount); length])
     }
 
     fn clean_amounts(amounts: Vec<Option<u32>>) -> Vec<Option<u32>> {
@@ -45,7 +55,7 @@ pub struct Bets {
 }
 
 impl Bets {
-    pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<BetAmount>) -> Self {
+    pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<BetAmounts>) -> Self {
         let mut bets = Self {
             array_indices: indices.clone(),
             bet_binaries: indices.iter().map(|i| nfc.data.bins[*i as usize]).collect(),
@@ -58,7 +68,7 @@ impl Bets {
         bets
     }
 
-    pub fn set_bet_amounts(&mut self, amounts: &Option<BetAmount>) {
+    pub fn set_bet_amounts(&mut self, amounts: &Option<BetAmounts>) {
         match amounts {
             Some(betamount) => {
                 let amounts = betamount.to_vec();

@@ -86,14 +86,18 @@ impl NeoFoodClub {
 
         let data = make_round_dicts(stds, round_data.currentOdds);
 
-        NeoFoodClub {
+        let mut nfc = NeoFoodClub {
             round_data: round_data.clone(),
             arenas,
-            bet_amount: bet_amount.map(|x| x.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX)),
+            bet_amount: None,
             stds,
             data,
             modifier: modifier.unwrap_or_default(),
-        }
+        };
+
+        nfc.set_bet_amount(bet_amount);
+
+        nfc
     }
 
     pub fn set_bet_amount(&mut self, amount: Option<u32>) {
@@ -349,13 +353,14 @@ impl NeoFoodClub {
     /// Following these bets is not recommended.
     pub fn make_random_bets(&self) -> Bets {
         let mut rng = rand::thread_rng();
-        let mut values: Vec<u16> = (0..3124).collect();
+        let values: Vec<u16> = (0..3124).collect();
 
-        values.shuffle(&mut rng);
+        let chosen_values: Vec<u16> = values
+            .choose_multiple(&mut rng, self.max_amount_of_bets())
+            .cloned()
+            .collect();
 
-        values.truncate(self.max_amount_of_bets());
-
-        let mut bets = Bets::new(self, values, None);
+        let mut bets = Bets::new(self, chosen_values, None);
         bets.fill_bet_amounts(self);
         bets
     }
@@ -556,7 +561,7 @@ impl NeoFoodClub {
 
         for index in max_ter_indices.iter() {
             let bin = self.data.bins[*index as usize];
-            if bin & pirates_binary == bin {
+            if bin & pirates_binary == pirates_binary {
                 bins.push(bin);
                 if bins.len() == bins.capacity() {
                     break;

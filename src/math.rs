@@ -1,3 +1,4 @@
+use core::panic;
 use itertools::iproduct;
 use rayon::prelude::*;
 use std::collections::{BTreeMap, HashMap};
@@ -87,6 +88,13 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
     indices
 }
 
+#[inline]
+pub fn bets_hash_regex_check(bets_hash: &str) {
+    if !regex::Regex::new("^[a-y]*$").unwrap().is_match(bets_hash) {
+        panic!("Invalid bet hash");
+    }
+}
+
 /// Returns the bet indices from a given bet hash.
 /// ```
 /// let bin = neofoodclub::math::bets_hash_to_bet_indices("");
@@ -106,6 +114,8 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 /// ```
 #[inline]
 pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
+    bets_hash_regex_check(bets_hash);
+
     let indices: Vec<u8> = bets_hash.chars().map(|chr| chr as u8 - b'a').collect();
 
     let mut output: Vec<u8> = indices
@@ -154,6 +164,7 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
 /// ```
 #[inline]
 pub fn bets_hash_to_bets_count(bets_hash: &str) -> usize {
+    bets_hash_regex_check(bets_hash);
     bets_hash_to_bet_indices(bets_hash).len()
 }
 
@@ -207,6 +218,14 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
 /// ```
 #[inline]
 pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
+    // check that the hash matches regex "^[a-y]+$" using regex
+    if !regex::Regex::new("^[a-zA-Z]*$")
+        .unwrap()
+        .is_match(amounts_hash)
+    {
+        panic!("Invalid hash");
+    }
+
     amounts_hash
         .chars()
         .collect::<Vec<_>>()
@@ -245,6 +264,7 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
 ///```
 #[inline]
 pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Vec<u32> {
+    bets_hash_regex_check(bets_hash);
     bets_hash_to_bet_indices(bets_hash)
         .iter()
         .map(|&indices| pirates_binary(indices))
