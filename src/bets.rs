@@ -98,7 +98,7 @@ impl Bets {
             .map(|(i, a)| {
                 let er = nfc.data.ers[*i as usize];
                 let amount = a.unwrap_or(0) as f64;
-                er * amount
+                amount * er - amount
             })
             .sum()
     }

@@ -636,7 +636,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_max_ter_bets();
 
-        assert!(bets.net_expected(&nfc) > 136316.0);
+        assert!(bets.net_expected(&nfc) > 56316.0);
     }
 
     #[test]
