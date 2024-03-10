@@ -709,11 +709,11 @@ mod tests {
     }
 
     #[test]
-    fn test_make_bets_from_binaries() {
+    fn test_make_bets_from_binaries_with_duplicate() {
         let nfc = make_test_nfc();
         let bets = nfc.make_bets_from_binaries(vec![0x80000, 0x8000, 0x800, 0x80, 0x8, 0x80000]);
 
-        assert_eq!(bets.len(), 6);
+        assert_eq!(bets.len(), 5);
     }
 
     #[test]

@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::{
     math::{
         amounts_hash_to_bet_amounts, bet_amounts_to_amounts_hash, bets_hash_to_bet_binaries,
@@ -155,7 +157,9 @@ impl Bets {
             .cloned()
             .collect();
 
-        Self::new(nfc, bin_indices, None)
+        let unique_bin_indices: Vec<u16> = bin_indices.into_iter().unique().collect();
+
+        Self::new(nfc, unique_bin_indices, None)
     }
 
     /// Creates a new Bets struct from a hash
