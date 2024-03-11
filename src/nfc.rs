@@ -6,6 +6,7 @@ use crate::math::{
 use crate::modifier::{Modifier, ModifierFlags};
 use crate::utils::argsort_by;
 use itertools::Itertools;
+use querystring::stringify;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
@@ -655,18 +656,58 @@ impl NeoFoodClub {
 
 impl NeoFoodClub {
     // URL-related stuff
-    pub fn make_url(&self, bets: &Bets) -> String {
-        let use_15 = self.modifier.is_charity_corner() || bets.len() > 10;
+    pub fn make_url(&self, bets: &Bets, include_domain: bool, all_data: bool) -> String {
+        let mut url = String::new();
 
-        let mut url = format!(
-            "https://neofood.club/{}#round={}&b={}",
-            if use_15 { "15/" } else { "" },
-            self.round(),
-            bets.bets_hash()
-        );
+        if include_domain {
+            url.push_str("https://neofood.club");
+        }
+
+        let use_15 = self.modifier.is_charity_corner() || bets.len() > 10;
+        if use_15 {
+            url.push_str("/15");
+        }
+
+        url.push_str(&format!("/#round={}", self.round()));
+
+        url.push_str(&format!("&b={}", bets.bets_hash()));
 
         if let Some(amounts_hash) = bets.amounts_hash() {
             url.push_str(&format!("&a={}", amounts_hash));
+        }
+
+        if all_data {
+            let mut params = vec![];
+
+            let pirates = serde_json::to_string(&self.round_data.pirates)
+                .expect("Failed to serialize pirates.");
+            params.push(("pirates", pirates.as_str()));
+
+            let opening_odds = serde_json::to_string(&self.round_data.openingOdds)
+                .expect("Failed to serialize openingOdds.");
+            params.push(("openingOdds", opening_odds.as_str()));
+
+            let mut params = vec![];
+
+            let current_odds = serde_json::to_string(&self.round_data.currentOdds)
+                .expect("Failed to serialize currentOdds.");
+            params.push(("currentOdds", current_odds.as_str()));
+
+            let winners_string = if self.is_over() {
+                serde_json::to_string(&self.winners()).unwrap()
+            } else {
+                String::new()
+            };
+            if !winners_string.is_empty() {
+                params.push(("winners", winners_string.as_str()));
+            }
+
+            let timestamp = self.timestamp().unwrap_or_default();
+            if !timestamp.is_empty() {
+                params.push(("timestamp", timestamp.as_str()));
+            }
+
+            url.push_str(&stringify(params));
         }
 
         url

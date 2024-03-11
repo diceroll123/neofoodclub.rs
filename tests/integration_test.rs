@@ -116,7 +116,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        let url = nfc.make_url(&bets);
+        let url = nfc.make_url(&bets, true, false);
 
         let [(beginning, round_number), (b, bets_hash), (a, amounts_hash)] =
             querystring::querify(&url)[..]
