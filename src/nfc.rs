@@ -323,8 +323,7 @@ impl NeoFoodClub {
             }
         }
 
-        // this should never happen
-        panic!("No full-arena bet found.");
+        unreachable!("No full-arena bets found, somehow");
     }
 
     /// Returns all full-arena indices.
