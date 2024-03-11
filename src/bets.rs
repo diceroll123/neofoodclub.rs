@@ -284,4 +284,9 @@ impl Bets {
             .map(|i| nfc.data.odds[*i as usize])
             .collect()
     }
+
+    /// Makes a URL for the bets using the NeoFoodClub object
+    pub fn make_url(&self, nfc: &NeoFoodClub, include_domain: bool, all_data: bool) -> String {
+        nfc.make_url(self, include_domain, all_data)
+    }
 }

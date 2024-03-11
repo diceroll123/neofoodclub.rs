@@ -154,6 +154,17 @@ mod tests {
     }
 
     #[test]
+    fn test_make_url_from_bets() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        assert_eq!(
+            nfc.make_url(&bets, true, false),
+            bets.make_url(&nfc, true, false)
+        );
+    }
+
+    #[test]
     fn test_get_win_units() {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
