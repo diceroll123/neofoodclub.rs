@@ -16,11 +16,11 @@ use crate::pirates::Pirate;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Change {
-    pub(super) t: String,
-    pub(super) new: u8,
-    pub(super) old: u8,
-    pub(super) arena: u8,
-    pub(super) pirate: u8,
+    pub t: String,
+    pub new: u8,
+    pub old: u8,
+    pub arena: u8,
+    pub pirate: u8,
 }
 
 #[allow(non_snake_case)]
@@ -41,16 +41,16 @@ struct RoundDataRaw {
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RoundData {
-    pub(super) foods: Option<[[u8; 10]; 5]>,
-    pub(super) round: u16,
-    pub(super) start: Option<String>,
-    pub(super) pirates: [[u8; 4]; 5],
-    pub(super) currentOdds: [[u8; 5]; 5],
-    pub(super) openingOdds: [[u8; 5]; 5],
-    pub(super) winners: Option<[u8; 5]>,
-    pub(super) timestamp: Option<String>,
-    pub(super) changes: Option<Vec<Change>>,
-    pub(super) lastChange: Option<String>,
+    pub foods: Option<[[u8; 10]; 5]>,
+    pub round: u16,
+    pub start: Option<String>,
+    pub pirates: [[u8; 4]; 5],
+    pub currentOdds: [[u8; 5]; 5],
+    pub openingOdds: [[u8; 5]; 5],
+    pub winners: Option<[u8; 5]>,
+    pub timestamp: Option<String>,
+    pub changes: Option<Vec<Change>>,
+    pub lastChange: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
