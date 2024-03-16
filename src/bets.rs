@@ -93,9 +93,9 @@ impl Bets {
         );
     }
 
-    pub fn net_expected(&self, nfc: &NeoFoodClub) -> f64 {
+    pub fn net_expected_list(&self, nfc: &NeoFoodClub) -> Vec<f64> {
         let Some(amounts) = &self.bet_amounts else {
-            return 0.0;
+            return vec![];
         };
 
         self.array_indices
@@ -104,16 +104,24 @@ impl Bets {
             .map(|(i, a)| {
                 let er = nfc.data.ers[*i as usize];
                 let amount = a.unwrap_or(0) as f64;
-                amount * er - amount
+                amount.mul_add(er, -amount)
             })
-            .sum()
+            .collect()
     }
 
-    pub fn expected_return(&self, nfc: &NeoFoodClub) -> f64 {
+    pub fn net_expected(&self, nfc: &NeoFoodClub) -> f64 {
+        self.net_expected_list(nfc).iter().sum()
+    }
+
+    pub fn expected_return_list(&self, nfc: &NeoFoodClub) -> Vec<f64> {
         self.array_indices
             .iter()
             .map(|i| nfc.data.ers[*i as usize])
-            .sum()
+            .collect()
+    }
+
+    pub fn expected_return(&self, nfc: &NeoFoodClub) -> f64 {
+        self.expected_return_list(nfc).iter().sum()
     }
 
     /// Fills the bet amounts in-place with the maximum possible amount to hit 1 million.
