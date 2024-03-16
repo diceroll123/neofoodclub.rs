@@ -350,6 +350,14 @@ impl NeoFoodClub {
         Bets::new(self, (0..3124).collect_vec(), None)
     }
 
+    pub fn make_all_max_ter_bets(&self) -> Bets {
+        let indices = self.max_ter_indices(3124);
+
+        let mut bets = Bets::new(self, indices, None);
+        bets.fill_bet_amounts(self);
+        bets
+    }
+
     /// Creates a Bets object that consists of random bets.
     /// Following these bets is not recommended.
     pub fn make_random_bets(&self) -> Bets {
