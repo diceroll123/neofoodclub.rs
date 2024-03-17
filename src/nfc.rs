@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::arena::Arenas;
 use crate::bets::Bets;
 use crate::math::{
@@ -238,6 +240,10 @@ impl NeoFoodClub {
 
     pub fn foods(&self) -> Option<[[u8; 10]; 5]> {
         self.round_data.foods
+    }
+
+    pub fn custom_odds(&self) -> Option<&HashMap<u8, u8>> {
+        self.modifier.custom_odds.as_ref()
     }
 
     pub fn to_json(&self) -> String {
