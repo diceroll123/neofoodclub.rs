@@ -250,6 +250,10 @@ impl NeoFoodClub {
         self.modifier.custom_odds.as_ref()
     }
 
+    pub fn modified(&self) -> bool {
+        self.modifier.modified()
+    }
+
     pub fn to_json(&self) -> String {
         serde_json::to_string(&self.round_data).expect("Failed to serialize to JSON.")
     }
