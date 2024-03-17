@@ -77,3 +77,12 @@ impl Modifier {
             .contains(ModifierFlags::CHARITY_CORNER)
     }
 }
+
+impl Modifier {
+    /// If the modifier has custom odds, this returns true.
+    /// Basically, this is a marker to know whether or not this
+    /// modifier edits food club data, meaning we will not store it anywhere.
+    pub fn modified(&self) -> bool {
+        self.custom_odds.is_some()
+    }
+}
