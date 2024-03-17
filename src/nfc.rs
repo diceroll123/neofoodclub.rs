@@ -33,7 +33,7 @@ struct RoundDataRaw {
     pirates: String,
     openingOdds: String,
     currentOdds: String,
-    winners: String,
+    winners: Option<String>,
     timestamp: Option<String>,
     lastChange: Option<String>,
 }
@@ -155,7 +155,9 @@ impl NeoFoodClub {
                 .expect("Invalid openingOdds JSON."),
             currentOdds: serde_json::from_str(&temp.currentOdds)
                 .expect("Invalid currentOdds JSON."),
-            winners: serde_json::from_str(&temp.winners).expect("Invalid winners JSON."),
+            winners: temp
+                .winners
+                .map(|x| serde_json::from_str(&x).expect("Invalid winners JSON.")),
             timestamp: temp.timestamp,
             changes: None,
             lastChange: temp.lastChange,
