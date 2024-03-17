@@ -19,7 +19,7 @@ impl OddsChange {
     }
 
     pub fn pirate_id(&self, nfc: &NeoFoodClub) -> usize {
-        nfc.pirates()[self.arena_index()][self.pirate_index()] as usize
+        nfc.pirates()[self.arena_index()][self.pirate_index() - 1] as usize
     }
 
     pub fn arena(&self) -> &str {
@@ -28,7 +28,7 @@ impl OddsChange {
 
     #[inline]
     pub fn pirate_index(&self) -> usize {
-        self.pirate as usize - 1
+        self.pirate as usize
     }
 
     #[inline]
