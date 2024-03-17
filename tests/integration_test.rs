@@ -28,6 +28,7 @@ mod tests {
 
     use core::panic;
 
+    use chrono::{DateTime, TimeDelta};
     use neofoodclub::{bets::BetAmounts, pirates::PartialPirateThings};
     use rayon::prelude::*;
 
@@ -793,5 +794,50 @@ mod tests {
         let bets = nfc.make_units_bets(300_000);
 
         assert!(bets.is_none());
+    }
+
+    #[test]
+    fn test_datetime() {
+        let nfc = make_test_nfc();
+        let start = nfc.start().unwrap();
+
+        let dt = chrono::DateTime::parse_from_rfc3339(&start)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+
+        assert!(dt < chrono::Utc::now());
+    }
+
+    #[test]
+    fn test_get_dst_offset_positive() {
+        let dst_mar_2024 = DateTime::parse_from_rfc3339("2024-03-11T00:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+
+        let offset = neofoodclub::utils::get_dst_offset(dst_mar_2024);
+
+        assert_eq!(offset, TimeDelta::try_hours(1).unwrap());
+    }
+
+    #[test]
+    fn test_get_dst_offset_negative() {
+        let dst_nov_2024 = DateTime::parse_from_rfc3339("2024-11-04T00:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+
+        let offset = neofoodclub::utils::get_dst_offset(dst_nov_2024);
+
+        assert_eq!(offset, TimeDelta::try_hours(-1).unwrap());
+    }
+
+    #[test]
+    fn test_get_dst_offset_zero() {
+        let jan_first_2024 = DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+
+        let offset = neofoodclub::utils::get_dst_offset(jan_first_2024);
+
+        assert!(offset.is_zero());
     }
 }

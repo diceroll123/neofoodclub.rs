@@ -7,7 +7,7 @@ use crate::math::{
 };
 use crate::modifier::{Modifier, ModifierFlags};
 use crate::oddschange::OddsChange;
-use crate::utils::argsort_by;
+use crate::utils::{argsort_by, get_dst_offset};
 use itertools::Itertools;
 use querystring::stringify;
 use rand::seq::SliceRandom;
@@ -247,13 +247,23 @@ impl NeoFoodClub {
     }
 
     pub fn is_outdated_lock(&self) -> bool {
-        let Some(_start) = self.start() else {
+        let Some(start) = self.start() else {
             return true;
         };
 
-        // TODO: do the date math
+        let start_date = chrono::DateTime::parse_from_rfc3339(&start)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
 
-        false
+        let day_after = start_date
+            .checked_add_signed(chrono::Duration::try_days(1).unwrap())
+            .unwrap();
+
+        let difference = get_dst_offset(day_after);
+
+        let now = chrono::Utc::now();
+
+        !(start_date <= now && now <= day_after + difference)
     }
 
     pub fn to_json(&self) -> String {
