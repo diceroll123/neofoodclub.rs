@@ -14,18 +14,24 @@ pub struct OddsChange {
 impl OddsChange {
     pub fn pirate(&self, nfc: &NeoFoodClub) -> PartialPirate {
         PartialPirate {
-            id: nfc.pirates()[self.arena as usize][self.pirate as usize - 1] as usize,
+            id: self.pirate_id(nfc),
         }
+    }
+
+    pub fn pirate_id(&self, nfc: &NeoFoodClub) -> usize {
+        nfc.pirates()[self.arena_index()][self.pirate_index()] as usize
     }
 
     pub fn arena(&self) -> &str {
         ARENA_NAMES[self.arena as usize]
     }
 
+    #[inline]
     pub fn pirate_index(&self) -> usize {
         self.pirate as usize - 1
     }
 
+    #[inline]
     pub fn arena_index(&self) -> usize {
         self.arena as usize
     }
