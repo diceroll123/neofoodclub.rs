@@ -744,6 +744,30 @@ mod tests {
     }
 
     #[test]
+    fn test_max_ter_reverse() {
+        let mut nfc = make_test_nfc_from_url();
+
+        nfc.modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None);
+        let bets = nfc.make_max_ter_bets();
+
+        assert_eq!(
+            bets.bet_amounts,
+            Some(vec![
+                Some(8000),
+                Some(8000),
+                Some(8000),
+                Some(8000),
+                Some(8000),
+                Some(8000),
+                Some(8000),
+                Some(8000),
+                Some(8000),
+                Some(8000),
+            ]),
+        );
+    }
+
+    #[test]
     fn test_make_units_bets_20() {
         let nfc = make_test_nfc();
         let bets = nfc.make_units_bets(20);
