@@ -79,10 +79,10 @@ impl Modifier {
 }
 
 impl Modifier {
-    /// If the modifier has custom odds, this returns true.
+    /// If the modifier has custom odds or opening odds, this returns true.
     /// Basically, this is a marker to know whether or not this
     /// modifier edits food club data, meaning we will not store it anywhere.
     pub fn modified(&self) -> bool {
-        self.custom_odds.is_some()
+        self.custom_odds.is_some() || self.is_opening_odds()
     }
 }
