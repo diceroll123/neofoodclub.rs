@@ -27,7 +27,7 @@ pub struct Change {
 #[derive(Debug, Deserialize)]
 struct RoundDataRaw {
     // as an intermediate step, we use this struct to deserialize the JSON
-    foods: String,
+    foods: Option<String>,
     round: u16,
     start: Option<String>,
     pirates: String,
@@ -145,7 +145,9 @@ impl NeoFoodClub {
         let temp: RoundDataRaw = serde_qs::from_str(parts[1]).expect("Invalid query string.");
 
         let round_data = RoundData {
-            foods: serde_json::from_str(&temp.foods).expect("Invalid foods JSON."),
+            foods: temp
+                .foods
+                .map(|x| serde_json::from_str(&x).expect("Invalid foods JSON.")),
             round: temp.round,
             start: temp.start,
             pirates: serde_json::from_str(&temp.pirates).expect("Invalid pirates JSON."),
