@@ -246,6 +246,16 @@ impl NeoFoodClub {
         self.modifier.modified()
     }
 
+    pub fn is_outdated_lock(&self) -> bool {
+        let Some(_start) = self.start() else {
+            return true;
+        };
+
+        // TODO: do the date math
+
+        false
+    }
+
     pub fn to_json(&self) -> String {
         serde_json::to_string(&self.round_data).expect("Failed to serialize to JSON.")
     }
