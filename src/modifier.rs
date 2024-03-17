@@ -22,7 +22,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Modifier {
     pub value: i32,
     pub custom_odds: Option<HashMap<u8, u8>>,
