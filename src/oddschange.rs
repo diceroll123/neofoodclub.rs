@@ -21,4 +21,12 @@ impl OddsChange {
     pub fn arena(&self) -> &str {
         ARENA_NAMES[self.arena as usize]
     }
+
+    pub fn pirate_index(&self) -> usize {
+        self.pirate as usize - 1
+    }
+
+    pub fn arena_index(&self) -> usize {
+        self.arena as usize
+    }
 }
