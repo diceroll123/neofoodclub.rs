@@ -230,6 +230,10 @@ impl NeoFoodClub {
         self.round_data.timestamp.clone()
     }
 
+    pub fn pirates(&self) -> [[u8; 4]; 5] {
+        self.round_data.pirates
+    }
+
     pub fn changes(&self) -> Option<Vec<Change>> {
         self.round_data.changes.clone()
     }
