@@ -856,4 +856,19 @@ fn validate_round_data(round_data: &RoundData) {
             }
         }
     }
+
+    if round_data.winners.is_some() {
+        let winners = round_data.winners.as_ref().unwrap();
+        if winners.len() != 5 {
+            panic!("Winners must have 5 integers.");
+        }
+
+        // the winners have to either be all 0, or all 1-4, let's check both
+        let all_zero = winners.iter().all(|&x| x == 0);
+        let all_one_to_four = winners.iter().all(|&x| (1..=4).contains(&x));
+
+        if !(all_zero ^ all_one_to_four) {
+            panic!("Winners must either be all 0, or all 1-4.");
+        }
+    }
 }
