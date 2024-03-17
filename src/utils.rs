@@ -20,11 +20,9 @@ pub fn get_dst_offset(today: DateTime<Utc>) -> TimeDelta {
     let today_offset = today_as_nst.offset().dst_offset();
     let yesterday_offset = yesterday.offset().dst_offset();
 
-    if yesterday_offset < today_offset {
-        return TimeDelta::try_hours(1).unwrap();
-    } else if yesterday_offset > today_offset {
-        return TimeDelta::try_hours(-1).unwrap();
+    match yesterday_offset.cmp(&today_offset) {
+        Ordering::Less => TimeDelta::try_hours(1).unwrap(),
+        Ordering::Greater => TimeDelta::try_hours(-1).unwrap(),
+        Ordering::Equal => TimeDelta::zero(),
     }
-
-    TimeDelta::zero()
 }
