@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn test_max_amount_of_bets_10() {
         let mut nfc = make_test_nfc();
-        let new_modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None);
+        let new_modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, None);
 
         nfc.modifier = new_modifier;
 
@@ -63,7 +63,7 @@ mod tests {
     #[test]
     fn test_max_amount_of_bets_15() {
         let mut nfc = make_test_nfc();
-        let new_modifier = Modifier::new(ModifierFlags::CHARITY_CORNER.bits(), None);
+        let new_modifier = Modifier::new(ModifierFlags::CHARITY_CORNER.bits(), None, None);
 
         nfc.modifier = new_modifier;
 
@@ -748,7 +748,7 @@ mod tests {
     fn test_max_ter_reverse() {
         let mut nfc = make_test_nfc_from_url();
 
-        nfc.modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None);
+        nfc.modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None, None);
         let bets = nfc.make_max_ter_bets();
 
         assert_eq!(

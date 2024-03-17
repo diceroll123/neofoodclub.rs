@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bitflags::bitflags;
+use chrono::NaiveTime;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -26,10 +27,15 @@ bitflags! {
 pub struct Modifier {
     pub value: i32,
     pub custom_odds: Option<HashMap<u8, u8>>,
+    pub custom_time: Option<NaiveTime>,
 }
 
 impl Modifier {
-    pub fn new(value: i32, custom_odds: Option<HashMap<u8, u8>>) -> Self {
+    pub fn new(
+        value: i32,
+        custom_odds: Option<HashMap<u8, u8>>,
+        custom_time: Option<NaiveTime>,
+    ) -> Self {
         // loop through custom_odds if it's not None and check if the keys are between 1-20 and the values are between 2-13
         if let Some(custom_odds) = custom_odds.clone() {
             for (key, value) in custom_odds.iter() {
@@ -42,7 +48,11 @@ impl Modifier {
             }
         }
 
-        Self { value, custom_odds }
+        Self {
+            value,
+            custom_odds,
+            custom_time,
+        }
     }
 }
 
@@ -83,6 +93,6 @@ impl Modifier {
     /// Basically, this is a marker to know whether or not this
     /// modifier edits food club data, meaning we will not store it anywhere.
     pub fn modified(&self) -> bool {
-        self.custom_odds.is_some() || self.is_opening_odds()
+        self.custom_odds.is_some() || self.is_opening_odds() || self.custom_time.is_some()
     }
 }
