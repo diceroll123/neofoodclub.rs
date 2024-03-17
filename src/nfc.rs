@@ -6,6 +6,7 @@ use crate::math::{
     make_round_dicts, pirates_binary, RoundDictData, BET_AMOUNT_MAX, BET_AMOUNT_MIN, BIT_MASKS,
 };
 use crate::modifier::{Modifier, ModifierFlags};
+use crate::oddschange::OddsChange;
 use crate::utils::argsort_by;
 use itertools::Itertools;
 use querystring::stringify;
@@ -15,15 +16,6 @@ use serde::{Deserialize, Serialize};
 use crate::models::multinomial_logit::MultinomialLogitModel;
 use crate::models::original::OriginalModel;
 use crate::pirates::Pirate;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Change {
-    pub t: String,
-    pub new: u8,
-    pub old: u8,
-    pub arena: u8,
-    pub pirate: u8,
-}
 
 #[allow(non_snake_case)]
 #[derive(Debug, Deserialize)]
@@ -51,7 +43,7 @@ pub struct RoundData {
     pub openingOdds: [[u8; 5]; 5],
     pub winners: Option<[u8; 5]>,
     pub timestamp: Option<String>,
-    pub changes: Option<Vec<Change>>,
+    pub changes: Option<Vec<OddsChange>>,
     pub lastChange: Option<String>,
 }
 
@@ -234,7 +226,7 @@ impl NeoFoodClub {
         self.round_data.pirates
     }
 
-    pub fn changes(&self) -> Option<Vec<Change>> {
+    pub fn changes(&self) -> Option<Vec<OddsChange>> {
         self.round_data.changes.clone()
     }
 

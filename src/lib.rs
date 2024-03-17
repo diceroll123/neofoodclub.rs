@@ -7,5 +7,6 @@ pub mod models;
 pub mod modifier;
 pub mod nfc;
 pub mod odds;
+pub mod oddschange;
 pub mod pirates;
 pub mod utils;
