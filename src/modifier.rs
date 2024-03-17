@@ -30,6 +30,18 @@ pub struct Modifier {
 
 impl Modifier {
     pub fn new(value: i32, custom_odds: Option<HashMap<u8, u8>>) -> Self {
+        // loop through custom_odds if it's not None and check if the keys are between 1-20 and the values are between 2-13
+        if let Some(custom_odds) = custom_odds.clone() {
+            for (key, value) in custom_odds.iter() {
+                if *key < 1 || *key > 20 {
+                    panic!("Invalid pirate ID, need 1-20, got {}", *key);
+                }
+                if *value < 2 || *value > 13 {
+                    panic!("Invalid odds, need 2-13, got {}", *value);
+                }
+            }
+        }
+
         Self { value, custom_odds }
     }
 }
