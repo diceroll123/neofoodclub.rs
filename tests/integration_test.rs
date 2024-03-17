@@ -742,4 +742,32 @@ mod tests {
 
         assert_eq!(nfc.round(), new_nfc.round());
     }
+
+    #[test]
+    fn test_make_units_bets_20() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_units_bets(20);
+
+        for odd in bets.unwrap().odds_values(&nfc) {
+            assert!(odd >= 20);
+        }
+    }
+
+    #[test]
+    fn test_make_units_bets_100() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_units_bets(100);
+
+        for odd in bets.unwrap().odds_values(&nfc) {
+            assert!(odd >= 100);
+        }
+    }
+
+    #[test]
+    fn test_make_units_bets_300000() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_units_bets(300_000);
+
+        assert!(bets.is_none());
+    }
 }

@@ -312,6 +312,23 @@ impl NeoFoodClub {
             .collect()
     }
 
+    fn get_sorted_probs_indices(&self, descending: bool, amount: usize) -> Vec<u16> {
+        let probs = &self.data.probs;
+
+        let mut binding = argsort_by(probs, &|a: &f64, b: &f64| a.partial_cmp(b).unwrap());
+
+        if descending {
+            binding.reverse();
+        }
+
+        binding
+            .iter()
+            .take(amount)
+            .cloned()
+            .map(|i| i as u16)
+            .collect()
+    }
+
     /// Return the binary representation of the highest expected return full-arena bet.
     fn get_highest_er_full_bet(&self) -> u32 {
         let max_ter_indices = self.max_ter_indices(3124);
@@ -356,6 +373,31 @@ impl NeoFoodClub {
         let mut bets = Bets::new(self, indices, None);
         bets.fill_bet_amounts(self);
         bets
+    }
+
+    pub fn make_units_bets(&self, units: u32) -> Option<Bets> {
+        let sorted_probs = self.get_sorted_probs_indices(true, 3124);
+
+        let mut units_indices = Vec::<u16>::with_capacity(self.max_amount_of_bets());
+
+        for index in sorted_probs.iter() {
+            if self.data.odds[*index as usize] >= units {
+                units_indices.push(*index);
+                if units_indices.len() == units_indices.capacity() {
+                    break;
+                }
+            }
+        }
+
+        if units_indices.is_empty() {
+            return None;
+        }
+
+        let mut bets = Bets::new(self, units_indices, None);
+
+        bets.fill_bet_amounts(self);
+
+        Some(bets)
     }
 
     /// Creates a Bets object that consists of random bets.
