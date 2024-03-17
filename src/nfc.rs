@@ -78,6 +78,8 @@ impl NeoFoodClub {
         model: Option<ProbabilityModel>,
         modifier: Option<Modifier>,
     ) -> NeoFoodClub {
+        validate_round_data(&round_data);
+
         let arenas = Arenas::new(&round_data);
 
         let stds = match model.unwrap_or_default() {
@@ -777,6 +779,81 @@ impl NeoFoodClub {
             stds,
             data,
             modifier,
+        }
+    }
+}
+
+fn validate_round_data(round_data: &RoundData) {
+    if round_data.round == 0 {
+        panic!("Round number must be greater than 0.");
+    }
+
+    if round_data.pirates.len() != 5 {
+        panic!("Pirates must have 5 arenas.");
+    }
+
+    for arena in round_data.pirates.iter() {
+        if arena.len() != 4 {
+            panic!("Each arena must have 4 pirates.");
+        }
+    }
+
+    if round_data.currentOdds.len() != 5 {
+        panic!("Current odds must have 5 arenas.");
+    }
+
+    for arena in round_data.currentOdds.iter() {
+        if arena.len() != 5 {
+            panic!("Each arena in currentOdds must have 5 integers, first one being 1.");
+        }
+
+        for (index, odds) in arena.iter().enumerate() {
+            if index == 0 {
+                if *odds != 1 {
+                    panic!("First integer in each arena in currentOdds must be 1.");
+                }
+            } else if *odds < 2 || *odds > 13 {
+                panic!("Odds must be between 2 and 13.");
+            }
+        }
+    }
+
+    if round_data.openingOdds.len() != 5 {
+        panic!("Opening odds must have 5 arenas.");
+    }
+
+    for arena in round_data.openingOdds.iter() {
+        if arena.len() != 5 {
+            panic!("Each arena in openingOdds must have 5 integers, first one being 1.");
+        }
+
+        for (index, odds) in arena.iter().enumerate() {
+            if index == 0 {
+                if *odds != 1 {
+                    panic!("First integer in each arena in openingOdds must be 1.");
+                }
+            } else if *odds < 2 || *odds > 13 {
+                panic!("Odds must be between 2 and 13.");
+            }
+        }
+    }
+
+    if round_data.foods.is_some() {
+        let foods = round_data.foods.as_ref().unwrap();
+        if foods.len() != 5 {
+            panic!("Foods must have 5 arenas.");
+        }
+
+        for arena in foods.iter() {
+            if arena.len() != 10 {
+                panic!("Each arena in foods must have 10 integers.");
+            }
+
+            for food in arena.iter() {
+                if *food < 1 || *food > 40 {
+                    panic!("Food integers must be between 1 and 40.");
+                }
+            }
         }
     }
 }
