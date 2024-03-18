@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bitflags::bitflags;
-use chrono::{NaiveTime, TimeZone};
+use chrono::NaiveTime;
 use chrono_tz::US::Pacific;
 
 use crate::round_data::RoundData;
@@ -109,12 +109,10 @@ impl Modifier {
 
         // apply custom time if necessary
         // only can if start is Some, and custom_time is Some, and changes is Some
-        if let Some(start_time) = &round_data.start_nst() {
+        if let Some(start_time_as_nst) = &round_data.start_nst() {
             if let Some(custom_time) = &self.custom_time {
                 if let Some(changes) = &round_data.changes {
                     round_data.currentOdds = round_data.openingOdds; // as a starting point
-
-                    let start_time_as_nst = Pacific.from_utc_datetime(&start_time.naive_utc());
 
                     let mut custom_time = start_time_as_nst
                         .date_naive()
@@ -123,7 +121,7 @@ impl Modifier {
                         .unwrap();
 
                     // if the custom time is before the start time, we need to add a day
-                    if custom_time < start_time_as_nst {
+                    if custom_time < *start_time_as_nst {
                         custom_time += chrono::Duration::try_days(1).unwrap();
                     }
 

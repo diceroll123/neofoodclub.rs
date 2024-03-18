@@ -36,6 +36,5 @@ pub fn timestamp_to_utc(timestamp: &str) -> DateTime<Utc> {
 
 #[inline]
 pub fn convert_from_utc_to_nst(utc: DateTime<Utc>) -> DateTime<Tz> {
-    let utc = utc.with_timezone(&Utc);
     Pacific.from_utc_datetime(&utc.naive_utc())
 }
