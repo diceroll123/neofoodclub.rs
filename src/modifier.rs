@@ -149,16 +149,17 @@ impl Modifier {
 
         // then, apply custom odds if necessary
         if let Some(custom_odds) = &self.custom_odds {
-            let flat_pirates = round_data.pirates.iter().flatten().collect::<Vec<_>>();
-
-            for (pirate, odds) in custom_odds.iter() {
-                if let Some(index) = flat_pirates.iter().position(|&x| x == pirate) {
-                    let arena = index / 4;
-                    let pirate = index % 4;
-
-                    round_data.currentOdds[arena][pirate + 1] = *odds;
-                }
-            }
+            round_data
+                .pirates
+                .iter()
+                .enumerate()
+                .for_each(|(arena_index, arena)| {
+                    arena.iter().enumerate().for_each(|(pirate_index, pirate)| {
+                        if let Some(odds) = custom_odds.get(pirate) {
+                            round_data.currentOdds[arena_index][pirate_index + 1] = *odds;
+                        }
+                    });
+                });
         }
 
         round_data
