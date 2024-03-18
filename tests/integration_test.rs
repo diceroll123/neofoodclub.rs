@@ -16,6 +16,10 @@ fn make_test_nfc() -> NeoFoodClub {
     NeoFoodClub::from_json(ROUND_DATA_JSON, Some(BET_AMOUNT), None, None)
 }
 
+fn make_test_nfc_with_modifier(modifier: Modifier) -> NeoFoodClub {
+    NeoFoodClub::from_json(ROUND_DATA_JSON, Some(BET_AMOUNT), None, Some(modifier))
+}
+
 fn make_test_nfc_from_url() -> NeoFoodClub {
     NeoFoodClub::from_url(ROUND_DATA_URL, Some(BET_AMOUNT), None, None)
 }
@@ -27,6 +31,7 @@ mod tests {
     // so in our tests we will be sorting and comparing that way
 
     use core::panic;
+    use std::collections::HashMap;
 
     use chrono::{DateTime, TimeDelta};
     use neofoodclub::{bets::BetAmounts, pirates::PartialPirateThings};
@@ -839,5 +844,27 @@ mod tests {
         let offset = neofoodclub::utils::get_dst_offset(jan_first_2024);
 
         assert!(offset.is_zero());
+    }
+
+    #[test]
+    fn test_modifier_odds() {
+        let mut custom_odds = HashMap::<u8, u8>::new();
+        for id in 1..=20 {
+            custom_odds.insert(id, 13);
+        }
+
+        let modifier = Modifier::new(ModifierFlags::all().bits(), Some(custom_odds), None);
+        let nfc = make_test_nfc_with_modifier(modifier);
+
+        assert_eq!(
+            nfc.current_odds(),
+            [
+                [1, 13, 13, 13, 13],
+                [1, 13, 13, 13, 13],
+                [1, 13, 13, 13, 13],
+                [1, 13, 13, 13, 13],
+                [1, 13, 13, 13, 13]
+            ]
+        );
     }
 }

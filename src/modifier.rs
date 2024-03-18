@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use bitflags::bitflags;
 use chrono::NaiveTime;
 
+use crate::nfc::RoundData;
+
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ModifierFlags: i32 {
@@ -94,5 +96,32 @@ impl Modifier {
     /// modifier edits food club data, meaning we will not store it anywhere.
     pub fn modified(&self) -> bool {
         self.custom_odds.is_some() || self.is_opening_odds() || self.custom_time.is_some()
+    }
+
+    pub fn apply(&self, round_data: &RoundData) -> RoundData {
+        let mut round_data = round_data.clone();
+
+        // first, apply opening odds to current odds if necessary
+        if self.is_opening_odds() {
+            round_data.currentOdds = round_data.openingOdds;
+        }
+
+        // TODO: implement custom time overwriting
+
+        // then, apply custom odds if necessary
+        if let Some(custom_odds) = &self.custom_odds {
+            let flat_pirates = round_data.pirates.iter().flatten().collect::<Vec<_>>();
+
+            for (pirate, odds) in custom_odds.iter() {
+                if let Some(index) = flat_pirates.iter().position(|&x| x == pirate) {
+                    let arena = index / 4;
+                    let pirate = index % 4;
+
+                    round_data.currentOdds[arena][pirate + 1] = *odds;
+                }
+            }
+        }
+
+        round_data
     }
 }

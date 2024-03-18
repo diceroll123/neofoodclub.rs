@@ -67,12 +67,19 @@ pub struct NeoFoodClub {
 impl NeoFoodClub {
     // constructor stuff
     pub fn new(
-        round_data: RoundData,
+        mut round_data: RoundData,
         bet_amount: Option<u32>,
         model: Option<ProbabilityModel>,
         modifier: Option<Modifier>,
     ) -> NeoFoodClub {
         validate_round_data(&round_data);
+
+        let use_modifier = modifier.unwrap_or_default();
+
+        if use_modifier.modified() {
+            // if the modifier has custom odds or opening odds or custom time, we apply it to the round data
+            round_data = use_modifier.apply(&round_data);
+        }
 
         let arenas = Arenas::new(&round_data);
 
@@ -89,7 +96,7 @@ impl NeoFoodClub {
             bet_amount: None,
             stds,
             data,
-            modifier: modifier.unwrap_or_default(),
+            modifier: use_modifier,
         };
 
         nfc.set_bet_amount(bet_amount);
