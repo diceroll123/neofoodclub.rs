@@ -906,4 +906,15 @@ mod tests {
 
         assert_eq!(nfc.changes().unwrap().len(), 4);
     }
+
+    #[test]
+    fn test_modifier_custom_time_expect_14_changes() {
+        let time = NaiveTime::parse_from_str("12:20:00", "%H:%M:%S").unwrap();
+
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time));
+
+        let nfc = make_test_nfc_with_modifier(modifier);
+
+        assert_eq!(nfc.changes().unwrap().len(), 14);
+    }
 }
