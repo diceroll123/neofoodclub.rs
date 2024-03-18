@@ -805,22 +805,17 @@ impl NeoFoodClub {
         url
     }
 
-    pub fn copy(&self) -> NeoFoodClub {
-        let round_data = self.round_data.clone();
-        let bet_amount = self.bet_amount;
-        let arenas = self.arenas.clone();
-        let stds = self.stds;
-        let data = self.data.clone();
-        let modifier = self.modifier.clone();
+    pub fn copy(&self, modifier: Option<Modifier>) -> NeoFoodClub {
+        // pub fn copy(&self, model: Option<ProbabilityModel>, modifier: Option<Modifier>) -> NeoFoodClub {
+        NeoFoodClub::new(self.round_data.clone(), self.bet_amount, None, modifier)
+    }
 
-        NeoFoodClub {
-            round_data,
-            bet_amount,
-            arenas,
-            stds,
-            data,
-            modifier,
-        }
+    pub fn with_modifier(
+        &self,
+        modifier: Option<Modifier>,
+        // model: Option<ProbabilityModel>,
+    ) -> NeoFoodClub {
+        NeoFoodClub::new(self.round_data.clone(), self.bet_amount, None, modifier)
     }
 }
 
