@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use bitflags::bitflags;
-use chrono::NaiveTime;
+use chrono::{NaiveTime, TimeZone};
+use chrono_tz::US::Pacific;
 
 use crate::nfc::RoundData;
 
@@ -106,7 +107,45 @@ impl Modifier {
             round_data.currentOdds = round_data.openingOdds;
         }
 
-        // TODO: implement custom time overwriting
+        // apply custom time if necessary
+        // only can if start is Some, and custom_time is Some, and changes is Some
+        if let Some(start_time) = &round_data.start_nst() {
+            if let Some(custom_time) = &self.custom_time {
+                if let Some(changes) = &round_data.changes {
+                    round_data.currentOdds = round_data.openingOdds; // as a starting point
+
+                    let start_time_as_nst = Pacific.from_utc_datetime(&start_time.naive_utc());
+
+                    let mut custom_time = start_time_as_nst
+                        .date_naive()
+                        .and_time(*custom_time)
+                        .and_local_timezone(Pacific)
+                        .unwrap();
+
+                    // if the custom time is before the start time, we need to add a day
+                    if custom_time < start_time_as_nst {
+                        custom_time += chrono::Duration::try_days(1).unwrap();
+                    }
+
+                    let new_changes = changes
+                        .iter()
+                        .filter(|change| change.timestamp_nst() <= custom_time)
+                        .cloned()
+                        .collect::<Vec<_>>();
+
+                    if !new_changes.is_empty() {
+                        for change in new_changes.clone() {
+                            round_data.currentOdds[change.arena_index()][change.pirate_index()] =
+                                change.new;
+                        }
+
+                        round_data.changes = Some(new_changes);
+                    } else {
+                        round_data.changes = None;
+                    }
+                }
+            }
+        }
 
         // then, apply custom odds if necessary
         if let Some(custom_odds) = &self.custom_odds {

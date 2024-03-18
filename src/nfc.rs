@@ -7,7 +7,9 @@ use crate::math::{
 };
 use crate::modifier::{Modifier, ModifierFlags};
 use crate::oddschange::OddsChange;
-use crate::utils::{argsort_by, get_dst_offset};
+use crate::utils::{argsort_by, convert_from_utc_to_nst, get_dst_offset, timestamp_to_utc};
+use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
 use itertools::Itertools;
 use querystring::stringify;
 use rand::seq::SliceRandom;
@@ -45,6 +47,42 @@ pub struct RoundData {
     pub timestamp: Option<String>,
     pub changes: Option<Vec<OddsChange>>,
     pub lastChange: Option<String>,
+}
+
+impl RoundData {
+    pub fn start_nst(&self) -> Option<DateTime<Tz>> {
+        self.start
+            .as_ref()
+            .map(|start| convert_from_utc_to_nst(timestamp_to_utc(start)))
+    }
+
+    pub fn last_change_nst(&self) -> Option<DateTime<Tz>> {
+        self.lastChange
+            .as_ref()
+            .map(|last_change| convert_from_utc_to_nst(timestamp_to_utc(last_change)))
+    }
+
+    pub fn timestamp_nst(&self) -> Option<DateTime<Tz>> {
+        self.timestamp
+            .as_ref()
+            .map(|timestamp| convert_from_utc_to_nst(timestamp_to_utc(timestamp)))
+    }
+
+    pub fn start_utc(&self) -> Option<DateTime<Utc>> {
+        self.start.as_ref().map(|start| timestamp_to_utc(start))
+    }
+
+    pub fn last_change_utc(&self) -> Option<DateTime<Utc>> {
+        self.lastChange
+            .as_ref()
+            .map(|last_change| timestamp_to_utc(last_change))
+    }
+
+    pub fn timestamp_utc(&self) -> Option<DateTime<Utc>> {
+        self.timestamp
+            .as_ref()
+            .map(|timestamp| timestamp_to_utc(timestamp))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -218,6 +256,15 @@ impl NeoFoodClub {
         self.round_data.start.clone()
     }
 
+    pub fn start_nst(&self) -> Option<DateTime<Tz>> {
+        self.start()
+            .map(|start| convert_from_utc_to_nst(timestamp_to_utc(&start)))
+    }
+
+    pub fn start_utc(&self) -> Option<DateTime<Utc>> {
+        self.start().map(|start| timestamp_to_utc(&start))
+    }
+
     pub fn current_odds(&self) -> [[u8; 5]; 5] {
         self.round_data.currentOdds
     }
@@ -242,6 +289,16 @@ impl NeoFoodClub {
         self.round_data.lastChange.clone()
     }
 
+    pub fn last_change_nst(&self) -> Option<DateTime<Tz>> {
+        self.last_change()
+            .map(|last_change| convert_from_utc_to_nst(timestamp_to_utc(&last_change)))
+    }
+
+    pub fn last_change_utc(&self) -> Option<DateTime<Utc>> {
+        self.last_change()
+            .map(|last_change| timestamp_to_utc(&last_change))
+    }
+
     pub fn foods(&self) -> Option<[[u8; 10]; 5]> {
         self.round_data.foods
     }
@@ -255,13 +312,9 @@ impl NeoFoodClub {
     }
 
     pub fn is_outdated_lock(&self) -> bool {
-        let Some(start) = self.start() else {
+        let Some(start_date) = self.start_utc() else {
             return true;
         };
-
-        let start_date = chrono::DateTime::parse_from_rfc3339(&start)
-            .unwrap()
-            .with_timezone(&chrono::Utc);
 
         let day_after = start_date
             .checked_add_signed(chrono::Duration::try_days(1).unwrap())

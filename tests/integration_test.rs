@@ -33,7 +33,7 @@ mod tests {
     use core::panic;
     use std::collections::HashMap;
 
-    use chrono::{DateTime, TimeDelta};
+    use chrono::{DateTime, NaiveTime, TimeDelta};
     use neofoodclub::{bets::BetAmounts, pirates::PartialPirateThings};
     use rayon::prelude::*;
 
@@ -847,13 +847,13 @@ mod tests {
     }
 
     #[test]
-    fn test_modifier_odds() {
+    fn test_modifier_custom_odds() {
         let mut custom_odds = HashMap::<u8, u8>::new();
         for id in 1..=20 {
             custom_odds.insert(id, 13);
         }
 
-        let modifier = Modifier::new(ModifierFlags::all().bits(), Some(custom_odds), None);
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None);
         let nfc = make_test_nfc_with_modifier(modifier);
 
         assert_eq!(
@@ -866,5 +866,44 @@ mod tests {
                 [1, 13, 13, 13, 13]
             ]
         );
+    }
+
+    #[test]
+    fn test_modifier_custom_time() {
+        let control_nfc = make_test_nfc();
+
+        let time = NaiveTime::parse_from_str("12:00:00", "%H:%M:%S").unwrap();
+
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time));
+
+        let nfc = make_test_nfc_with_modifier(modifier);
+
+        let modified_length = nfc.changes().unwrap().len();
+
+        let control_length = control_nfc.changes().unwrap().len();
+
+        assert_ne!(modified_length, control_length);
+    }
+
+    #[test]
+    fn test_modifier_custom_time_expect_no_changes() {
+        let time = NaiveTime::parse_from_str("16:15:00", "%H:%M:%S").unwrap();
+
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time));
+
+        let nfc = make_test_nfc_with_modifier(modifier);
+
+        assert!(nfc.changes().is_none());
+    }
+
+    #[test]
+    fn test_modifier_custom_time_expect_4_changes() {
+        let time = NaiveTime::parse_from_str("18:00:00", "%H:%M:%S").unwrap();
+
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time));
+
+        let nfc = make_test_nfc_with_modifier(modifier);
+
+        assert_eq!(nfc.changes().unwrap().len(), 4);
     }
 }

@@ -1,5 +1,5 @@
 use chrono::{DateTime, Duration, TimeDelta, TimeZone, Utc};
-use chrono_tz::{OffsetComponents, US::Pacific};
+use chrono_tz::{OffsetComponents, Tz, US::Pacific};
 use std::cmp::Ordering;
 /// ```
 /// let arr = vec![5, 4, 3, 2, 1, 6, 7, 8, 9, 0];
@@ -25,4 +25,17 @@ pub fn get_dst_offset(today: DateTime<Utc>) -> TimeDelta {
         Ordering::Greater => TimeDelta::try_hours(-1).unwrap(),
         Ordering::Equal => TimeDelta::zero(),
     }
+}
+
+#[inline]
+pub fn timestamp_to_utc(timestamp: &str) -> DateTime<Utc> {
+    DateTime::parse_from_rfc3339(timestamp)
+        .unwrap()
+        .with_timezone(&Utc)
+}
+
+#[inline]
+pub fn convert_from_utc_to_nst(utc: DateTime<Utc>) -> DateTime<Tz> {
+    let utc = utc.with_timezone(&Utc);
+    Pacific.from_utc_datetime(&utc.naive_utc())
 }

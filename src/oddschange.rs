@@ -1,6 +1,13 @@
+use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 
-use crate::{arena::ARENA_NAMES, nfc::NeoFoodClub, pirates::PartialPirate};
+use crate::{
+    arena::ARENA_NAMES,
+    nfc::NeoFoodClub,
+    pirates::PartialPirate,
+    utils::{convert_from_utc_to_nst, timestamp_to_utc},
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OddsChange {
@@ -34,5 +41,13 @@ impl OddsChange {
     #[inline]
     pub fn arena_index(&self) -> usize {
         self.arena as usize
+    }
+
+    pub fn timestamp_nst(&self) -> DateTime<Tz> {
+        convert_from_utc_to_nst(self.timestamp_utc())
+    }
+
+    pub fn timestamp_utc(&self) -> DateTime<Utc> {
+        timestamp_to_utc(&self.t)
     }
 }
