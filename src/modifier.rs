@@ -162,4 +162,12 @@ impl Modifier {
 
         round_data
     }
+
+    pub fn copy(&self) -> Self {
+        Self {
+            value: self.value,
+            custom_odds: self.custom_odds.clone(),
+            custom_time: self.custom_time,
+        }
+    }
 }
