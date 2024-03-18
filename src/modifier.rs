@@ -4,7 +4,7 @@ use bitflags::bitflags;
 use chrono::{NaiveTime, TimeZone};
 use chrono_tz::US::Pacific;
 
-use crate::nfc::RoundData;
+use crate::round_data::RoundData;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

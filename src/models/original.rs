@@ -1,4 +1,4 @@
-use crate::nfc::RoundData;
+use crate::round_data::RoundData;
 
 #[derive(Debug, Clone)]
 pub struct OriginalModel {}

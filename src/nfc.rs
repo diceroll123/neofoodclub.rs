@@ -7,13 +7,14 @@ use crate::math::{
 };
 use crate::modifier::{Modifier, ModifierFlags};
 use crate::oddschange::OddsChange;
+use crate::round_data::RoundData;
 use crate::utils::{argsort_by, convert_from_utc_to_nst, get_dst_offset, timestamp_to_utc};
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use itertools::Itertools;
 use querystring::stringify;
 use rand::seq::SliceRandom;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::models::multinomial_logit::MultinomialLogitModel;
 use crate::models::original::OriginalModel;
@@ -32,57 +33,6 @@ struct RoundDataRaw {
     winners: Option<String>,
     timestamp: Option<String>,
     lastChange: Option<String>,
-}
-
-#[allow(non_snake_case)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct RoundData {
-    pub foods: Option<[[u8; 10]; 5]>,
-    pub round: u16,
-    pub start: Option<String>,
-    pub pirates: [[u8; 4]; 5],
-    pub currentOdds: [[u8; 5]; 5],
-    pub openingOdds: [[u8; 5]; 5],
-    pub winners: Option<[u8; 5]>,
-    pub timestamp: Option<String>,
-    pub changes: Option<Vec<OddsChange>>,
-    pub lastChange: Option<String>,
-}
-
-impl RoundData {
-    pub fn start_nst(&self) -> Option<DateTime<Tz>> {
-        self.start
-            .as_ref()
-            .map(|start| convert_from_utc_to_nst(timestamp_to_utc(start)))
-    }
-
-    pub fn last_change_nst(&self) -> Option<DateTime<Tz>> {
-        self.lastChange
-            .as_ref()
-            .map(|last_change| convert_from_utc_to_nst(timestamp_to_utc(last_change)))
-    }
-
-    pub fn timestamp_nst(&self) -> Option<DateTime<Tz>> {
-        self.timestamp
-            .as_ref()
-            .map(|timestamp| convert_from_utc_to_nst(timestamp_to_utc(timestamp)))
-    }
-
-    pub fn start_utc(&self) -> Option<DateTime<Utc>> {
-        self.start.as_ref().map(|start| timestamp_to_utc(start))
-    }
-
-    pub fn last_change_utc(&self) -> Option<DateTime<Utc>> {
-        self.lastChange
-            .as_ref()
-            .map(|last_change| timestamp_to_utc(last_change))
-    }
-
-    pub fn timestamp_utc(&self) -> Option<DateTime<Utc>> {
-        self.timestamp
-            .as_ref()
-            .map(|timestamp| timestamp_to_utc(timestamp))
-    }
 }
 
 #[derive(Debug, Clone, Default)]

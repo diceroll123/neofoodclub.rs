@@ -3,8 +3,8 @@ use std::ops::{Add, Sub};
 use crate::{
     food_adjustments::{NEGATIVE_FOOD, POSITIVE_FOOD},
     math::binary_to_indices,
-    nfc::RoundData,
     pirates::Pirate,
+    round_data::RoundData,
 };
 
 pub const ARENA_NAMES: [&str; 5] = ["Shipwreck", "Lagoon", "Treasure", "Hidden", "Harpoon"];

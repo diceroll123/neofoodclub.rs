@@ -9,4 +9,5 @@ pub mod nfc;
 pub mod odds;
 pub mod oddschange;
 pub mod pirates;
+pub mod round_data;
 pub mod utils;
