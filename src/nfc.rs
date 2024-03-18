@@ -809,14 +809,6 @@ impl NeoFoodClub {
         // pub fn copy(&self, model: Option<ProbabilityModel>, modifier: Option<Modifier>) -> NeoFoodClub {
         NeoFoodClub::new(self.round_data.clone(), self.bet_amount, None, modifier)
     }
-
-    pub fn with_modifier(
-        &self,
-        modifier: Option<Modifier>,
-        // model: Option<ProbabilityModel>,
-    ) -> NeoFoodClub {
-        NeoFoodClub::new(self.round_data.clone(), self.bet_amount, None, modifier)
-    }
 }
 
 fn validate_round_data(round_data: &RoundData) {
