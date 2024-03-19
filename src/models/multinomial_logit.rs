@@ -38,7 +38,7 @@ pub fn make_probabilities(arenas: &Arenas) -> [[f64; 5]; 5] {
         }
 
         for pirate in &arena.pirates {
-            probs[arena.id as usize][pirate.id as usize] =
+            probs[arena.id as usize][pirate.index as usize] =
                 capabilities[pirate.index as usize] / capabilities[0];
         }
     }
