@@ -1,12 +1,15 @@
+use comfy_table::Table;
 use itertools::Itertools;
 
 use crate::{
+    arena::ARENA_NAMES,
     math::{
         amounts_hash_to_bet_amounts, bet_amounts_to_amounts_hash, bets_hash_to_bet_binaries,
         bets_hash_value, binary_to_indices, pirates_binary, BET_AMOUNT_MAX, BET_AMOUNT_MIN,
     },
     nfc::NeoFoodClub,
     odds::Odds,
+    pirates::PartialPirateThings,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -296,5 +299,82 @@ impl Bets {
     /// Makes a URL for the bets using the NeoFoodClub object
     pub fn make_url(&self, nfc: &NeoFoodClub, include_domain: bool, all_data: bool) -> String {
         nfc.make_url(self, include_domain, all_data)
+    }
+
+    pub fn table(&self, nfc: &NeoFoodClub) -> String {
+        let mut table = Table::new();
+
+        let mut headers = vec!["#"];
+
+        headers.extend(ARENA_NAMES);
+
+        table.set_header(headers);
+
+        let arenas = nfc.arenas.clone();
+
+        for (bet_index, bet_row) in self.get_indices().iter().enumerate() {
+            let mut row = vec![(bet_index + 1).to_string()];
+
+            for (arena_index, pirate_index) in bet_row.iter().enumerate() {
+                if pirate_index == &0 {
+                    row.push("".to_string());
+                } else {
+                    let arena = arenas.get_arena(arena_index).unwrap();
+                    let pirate = &arena.get_pirate_by_index(pirate_index - 1).unwrap();
+                    row.push(pirate.get_name().to_string());
+                }
+            }
+            table.add_row(row);
+        }
+
+        table.to_string()
+    }
+
+    pub fn stats_table(&self, nfc: &NeoFoodClub) -> String {
+        let mut table = Table::new();
+
+        let mut headers = vec!["#", "Odds", "ER", "MaxBet", "Hex"];
+
+        headers.extend(ARENA_NAMES);
+
+        table.set_header(headers);
+
+        let arenas = nfc.arenas.clone();
+
+        for (bet_index, (bet_binary, bet_indices)) in self
+            .get_binaries()
+            .iter()
+            .zip(self.get_indices().iter())
+            .enumerate()
+        {
+            let mut row = vec![(bet_index + 1).to_string()];
+
+            let bin_index = nfc
+                .data
+                .bins
+                .iter()
+                .position(|&r| r == *bet_binary)
+                .unwrap();
+
+            row.extend(vec![
+                nfc.data.odds[bin_index].to_string(),
+                format!("{:.3}:1", nfc.data.ers[bin_index]),
+                nfc.data.maxbets[bin_index].to_string(),
+                format!("0x{:X}", bet_binary),
+            ]);
+
+            for (arena_index, pirate_index) in bet_indices.iter().enumerate() {
+                if pirate_index == &0 {
+                    row.push("".to_string());
+                } else {
+                    let arena = arenas.get_arena(arena_index).unwrap();
+                    let pirate = &arena.get_pirate_by_index(pirate_index - 1).unwrap();
+                    row.push(pirate.get_name().to_string());
+                }
+            }
+            table.add_row(row);
+        }
+
+        table.to_string()
     }
 }
