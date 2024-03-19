@@ -744,7 +744,7 @@ mod tests {
     #[test]
     fn test_nfc_copy() {
         let nfc = make_test_nfc();
-        let new_nfc = nfc.copy(None);
+        let new_nfc = nfc.copy(None, None);
 
         assert_eq!(nfc.round(), new_nfc.round());
     }
