@@ -1,6 +1,6 @@
 use neofoodclub::math::{self, BET_AMOUNT_MAX, BET_AMOUNT_MIN};
 use neofoodclub::modifier::{Modifier, ModifierFlags};
-use neofoodclub::nfc::NeoFoodClub;
+use neofoodclub::nfc::{NeoFoodClub, ProbabilityModel};
 
 // Round 8765
 const ROUND_DATA_JSON: &str = r#"
@@ -14,6 +14,15 @@ const BET_AMOUNT: u32 = 8000;
 
 fn make_test_nfc() -> NeoFoodClub {
     NeoFoodClub::from_json(ROUND_DATA_JSON, Some(BET_AMOUNT), None, None)
+}
+
+fn make_test_nfc_logit() -> NeoFoodClub {
+    NeoFoodClub::from_json(
+        ROUND_DATA_JSON,
+        Some(BET_AMOUNT),
+        Some(ProbabilityModel::MultinomialLogitModel),
+        None,
+    )
 }
 
 fn make_test_nfc_with_modifier(modifier: Modifier) -> NeoFoodClub {
@@ -916,5 +925,13 @@ mod tests {
         let nfc = make_test_nfc_with_modifier(modifier);
 
         assert_eq!(nfc.changes().unwrap().len(), 14);
+    }
+
+    #[test]
+    fn test_logit() {
+        let nfc = make_test_nfc_logit();
+        let bets = nfc.make_best_gambit_bets();
+
+        assert!(bets.is_gambit());
     }
 }
