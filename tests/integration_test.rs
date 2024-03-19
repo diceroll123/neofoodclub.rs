@@ -934,4 +934,139 @@ mod tests {
 
         assert!(bets.is_gambit());
     }
+
+    #[test]
+    fn test_last_change_with_timezones() {
+        let nfc = make_test_nfc();
+
+        assert_eq!(
+            nfc.last_change_nst().unwrap().to_string(),
+            "2023-05-06 12:21:01 PDT"
+        );
+
+        assert_eq!(
+            nfc.last_change_utc().unwrap().to_string(),
+            "2023-05-06 19:21:01 UTC"
+        );
+    }
+
+    #[test]
+    fn test_timestamp_with_timezones() {
+        let nfc = make_test_nfc();
+
+        assert_eq!(
+            nfc.timestamp_nst().unwrap().to_string(),
+            "2023-05-06 16:14:20 PDT"
+        );
+
+        assert_eq!(
+            nfc.timestamp_utc().unwrap().to_string(),
+            "2023-05-06 23:14:20 UTC"
+        );
+    }
+
+    #[test]
+    fn test_start_with_timezones() {
+        let nfc = make_test_nfc();
+
+        assert_eq!(
+            nfc.start_nst().unwrap().to_string(),
+            "2023-05-05 16:14:57 PDT"
+        );
+
+        assert_eq!(
+            nfc.start_utc().unwrap().to_string(),
+            "2023-05-05 23:14:57 UTC"
+        );
+    }
+
+    #[test]
+    fn test_timestamp() {
+        let nfc = make_test_nfc();
+
+        assert_eq!(nfc.timestamp().unwrap(), "2023-05-06T23:14:20+00:00");
+    }
+
+    #[test]
+    fn test_last_change() {
+        let nfc = make_test_nfc();
+
+        assert_eq!(nfc.last_change().unwrap(), "2023-05-06T19:21:01+00:00");
+    }
+
+    #[test]
+    fn test_opening_odds() {
+        let nfc = make_test_nfc();
+
+        assert_eq!(
+            nfc.opening_odds(),
+            [
+                [1, 11, 3, 2, 4],
+                [1, 13, 2, 5, 13],
+                [1, 13, 2, 5, 2],
+                [1, 2, 8, 5, 5],
+                [1, 13, 3, 2, 4]
+            ]
+        );
+    }
+
+    #[test]
+    fn test_pirates() {
+        let nfc = make_test_nfc();
+
+        assert_eq!(
+            nfc.pirates(),
+            [
+                [6, 11, 4, 3],
+                [14, 15, 2, 9],
+                [10, 16, 18, 20],
+                [1, 12, 13, 5],
+                [8, 19, 17, 7]
+            ]
+        );
+    }
+
+    #[test]
+    fn test_modified() {
+        let nfc = make_test_nfc();
+
+        let mut custom_odds = HashMap::<u8, u8>::new();
+        custom_odds.insert(1, 13);
+
+        let modifier = Modifier::new(
+            ModifierFlags::EMPTY.bits(),
+            Some(custom_odds.clone()),
+            NaiveTime::from_hms_opt(12, 0, 0),
+        );
+
+        let modified_nfc = nfc.copy(None, Some(modifier));
+
+        assert!(modified_nfc.modified());
+
+        assert_eq!(modified_nfc.modifier.custom_odds, Some(custom_odds));
+    }
+
+    #[test]
+    fn test_to_json() {
+        let nfc = make_test_nfc();
+
+        let json = nfc.to_json();
+
+        let new_nfc = NeoFoodClub::from_json(&json, None, None, None);
+
+        assert_eq!(new_nfc.round(), nfc.round());
+        assert!(new_nfc.modifier.is_empty());
+    }
+
+    #[test]
+    fn test_modifier_copy() {
+        let mut custom_odds = HashMap::<u8, u8>::new();
+        custom_odds.insert(1, 13);
+
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None);
+
+        let new_modifier = modifier.copy();
+
+        assert_eq!(modifier, new_modifier);
+    }
 }

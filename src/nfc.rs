@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::arena::Arenas;
 use crate::bets::Bets;
 use crate::math::{
@@ -8,7 +6,7 @@ use crate::math::{
 use crate::modifier::{Modifier, ModifierFlags};
 use crate::oddschange::OddsChange;
 use crate::round_data::RoundData;
-use crate::utils::{argsort_by, convert_from_utc_to_nst, get_dst_offset, timestamp_to_utc};
+use crate::utils::{argsort_by, get_dst_offset};
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use itertools::Itertools;
@@ -221,14 +219,13 @@ impl NeoFoodClub {
     /// Returns the start time of the round in NST.
     /// If the start time is not available, returns None.
     pub fn start_nst(&self) -> Option<DateTime<Tz>> {
-        self.start()
-            .map(|start| convert_from_utc_to_nst(timestamp_to_utc(&start)))
+        self.round_data.start_nst()
     }
 
     /// Returns the start time of the round in UTC.
     /// If the start time is not available, returns None.
     pub fn start_utc(&self) -> Option<DateTime<Utc>> {
-        self.start().map(|start| timestamp_to_utc(&start))
+        self.round_data.start_utc()
     }
 
     /// Returns the current odds.
@@ -278,26 +275,19 @@ impl NeoFoodClub {
     /// Returns the last change of the round in NST.
     /// If the last change is not available, returns None.
     pub fn last_change_nst(&self) -> Option<DateTime<Tz>> {
-        self.last_change()
-            .map(|last_change| convert_from_utc_to_nst(timestamp_to_utc(&last_change)))
+        self.round_data.last_change_nst()
     }
 
     /// Returns the last change of the round in UTC.
     /// If the last change is not available, returns None.
     pub fn last_change_utc(&self) -> Option<DateTime<Utc>> {
-        self.last_change()
-            .map(|last_change| timestamp_to_utc(&last_change))
+        self.round_data.last_change_utc()
     }
 
     /// Returns the foods of the round.
     /// If the foods are not available, returns None.
     pub fn foods(&self) -> Option<[[u8; 10]; 5]> {
         self.round_data.foods
-    }
-
-    /// Returns the custom odds in the modifier, if any.
-    pub fn custom_odds(&self) -> Option<&HashMap<u8, u8>> {
-        self.modifier.custom_odds.as_ref()
     }
 
     /// Returns whether or not the modifier has made changes to the round data.
