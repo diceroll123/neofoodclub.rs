@@ -35,6 +35,7 @@ struct RoundDataRaw {
     lastChange: Option<String>,
 }
 
+/// The probability model to use when calculating bets.
 #[derive(Debug, Clone, Default)]
 pub enum ProbabilityModel {
     #[default]
@@ -42,6 +43,9 @@ pub enum ProbabilityModel {
     MultinomialLogitModel,
 }
 
+/// A struct to represent the NeoFoodClub object.
+/// This object contains all the data needed to calculate bets,
+/// and methods to create URLs.
 #[derive(Debug, Clone)]
 pub struct NeoFoodClub {
     pub round_data: RoundData,
@@ -92,10 +96,13 @@ impl NeoFoodClub {
         nfc
     }
 
+    /// Sets the bet amount
     pub fn set_bet_amount(&mut self, amount: Option<u32>) {
         self.bet_amount = amount.map(|x| x.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX));
     }
 
+    /// Creates a NeoFoodClub object from a JSON string.
+    /// This is generally the entrypoint for creating a NeoFoodClub object.
     pub fn from_json(
         json: &str,
         bet_amount: Option<u32>,
@@ -107,6 +114,7 @@ impl NeoFoodClub {
         NeoFoodClub::new(round_data, bet_amount, model, modifier)
     }
 
+    /// Creates a NeoFoodClub object from a NeoFoodClub-like URL.
     pub fn from_url(
         url: &str,
         bet_amount: Option<u32>,
@@ -198,69 +206,106 @@ impl NeoFoodClub {
 
 impl NeoFoodClub {
     // getters from round_data
+
+    /// Returns the round number.
     pub fn round(&self) -> u16 {
         self.round_data.round
     }
 
+    /// Returns the start time of the round in ISO 8601 format as a string.
+    /// If the start time is not available, returns None.
     pub fn start(&self) -> Option<String> {
         self.round_data.start.clone()
     }
 
+    /// Returns the start time of the round in NST.
+    /// If the start time is not available, returns None.
     pub fn start_nst(&self) -> Option<DateTime<Tz>> {
         self.start()
             .map(|start| convert_from_utc_to_nst(timestamp_to_utc(&start)))
     }
 
+    /// Returns the start time of the round in UTC.
+    /// If the start time is not available, returns None.
     pub fn start_utc(&self) -> Option<DateTime<Utc>> {
         self.start().map(|start| timestamp_to_utc(&start))
     }
 
+    /// Returns the current odds.
     pub fn current_odds(&self) -> [[u8; 5]; 5] {
         self.round_data.currentOdds
     }
 
+    /// Returns the opening odds.
     pub fn opening_odds(&self) -> [[u8; 5]; 5] {
         self.round_data.openingOdds
     }
 
+    /// Returns the timestamp of the round in ISO 8601 format as a string.
     pub fn timestamp(&self) -> Option<String> {
         self.round_data.timestamp.clone()
     }
 
+    /// Returns the timestamp of the round in NST.
+    /// If the timestamp is not available, returns None.
+    pub fn timestamp_nst(&self) -> Option<DateTime<Tz>> {
+        self.round_data.timestamp_nst()
+    }
+
+    /// Returns the timestamp of the round in UTC.
+    /// If the timestamp is not available, returns None.
+    pub fn timestamp_utc(&self) -> Option<DateTime<Utc>> {
+        self.round_data.timestamp_utc()
+    }
+
+    /// Returns the pirate IDs, as a 2D array.
+    /// The first dimension is the arena index, and the second dimension is the pirate index.
     pub fn pirates(&self) -> [[u8; 4]; 5] {
         self.round_data.pirates
     }
 
+    /// Returns the changes of the round.
     pub fn changes(&self) -> Option<Vec<OddsChange>> {
         self.round_data.changes.clone()
     }
 
+    /// Returns the last change of the round in ISO 8601 format as a string.
+    /// If the last change is not available, returns None.
     pub fn last_change(&self) -> Option<String> {
         self.round_data.lastChange.clone()
     }
 
+    /// Returns the last change of the round in NST.
+    /// If the last change is not available, returns None.
     pub fn last_change_nst(&self) -> Option<DateTime<Tz>> {
         self.last_change()
             .map(|last_change| convert_from_utc_to_nst(timestamp_to_utc(&last_change)))
     }
 
+    /// Returns the last change of the round in UTC.
+    /// If the last change is not available, returns None.
     pub fn last_change_utc(&self) -> Option<DateTime<Utc>> {
         self.last_change()
             .map(|last_change| timestamp_to_utc(&last_change))
     }
 
+    /// Returns the foods of the round.
+    /// If the foods are not available, returns None.
     pub fn foods(&self) -> Option<[[u8; 10]; 5]> {
         self.round_data.foods
     }
 
+    /// Returns the custom odds in the modifier, if any.
     pub fn custom_odds(&self) -> Option<&HashMap<u8, u8>> {
         self.modifier.custom_odds.as_ref()
     }
 
+    /// Returns whether or not the modifier has made changes to the round data.
     pub fn modified(&self) -> bool {
         self.modifier.modified()
     }
 
+    /// Returns whether or not the round is outdated.
     pub fn is_outdated_lock(&self) -> bool {
         let Some(start_date) = self.start_utc() else {
             return true;
@@ -277,6 +322,7 @@ impl NeoFoodClub {
         !(start_date <= now && now <= day_after + difference)
     }
 
+    /// Serialize the round data to JSON.
     pub fn to_json(&self) -> String {
         serde_json::to_string(&self.round_data).expect("Failed to serialize to JSON.")
     }
@@ -355,6 +401,9 @@ impl NeoFoodClub {
             .collect()
     }
 
+    /// Returns sorted indices of probabilities
+    /// If `descending` is true, returns highest to lowest.
+    /// If `descending` is false, returns lowest to highest.
     fn get_sorted_probs_indices(&self, descending: bool, amount: usize) -> Vec<u16> {
         let probs = &self.data.probs;
 
@@ -410,6 +459,8 @@ impl NeoFoodClub {
         Bets::new(self, (0..3124).collect_vec(), None)
     }
 
+    /// Creates a Bets object that consists of all max-TER bets.
+    /// This is mostly for debugging purposes.
     pub fn make_all_max_ter_bets(&self) -> Bets {
         let indices = self.max_ter_indices(3124);
 
@@ -418,6 +469,8 @@ impl NeoFoodClub {
         bets
     }
 
+    /// Creates a Bets object that consists of the highest ER bets that
+    /// are greater than or equal to the given units.
     pub fn make_units_bets(&self, units: u32) -> Option<Bets> {
         let sorted_probs = self.get_sorted_probs_indices(true, 3124);
 
@@ -635,6 +688,11 @@ impl NeoFoodClub {
         None
     }
 
+    /// Creates a Bets object that consists of 10-bets on the selected pirates.
+    /// Returns an error if the pirates binary is invalid.
+    /// Returns an error if the amount of pirates is invalid.
+    /// Returns an error if the amount of pirates is greater than 3.
+    /// Returns an error if the amount of pirates is less than 1.
     pub fn make_tenbet_bets(&self, pirates_binary: u32) -> Result<Bets, String> {
         let mut amount_of_pirates = 0;
         for mask in BIT_MASKS.iter() {
@@ -703,6 +761,8 @@ impl NeoFoodClub {
 impl NeoFoodClub {
     // win-related stuff
 
+    /// Returns the amount of units you'd win if you placed the given bets.
+    /// Returns 0 if there are no winners yet.
     pub fn get_win_units(&self, bets: &Bets) -> u32 {
         let winners_binary = self.winners_binary();
 
@@ -721,6 +781,9 @@ impl NeoFoodClub {
         units
     }
 
+    /// Returns the amount of neopoints you'd win if you placed the given bets.
+    /// Returns 0 if there are no winners yet.
+    /// Returns 0 if there are no bet amounts.
     pub fn get_win_np(&self, bets: &Bets) -> u32 {
         let Some(bet_amounts) = bets.bet_amounts.as_ref() else {
             return 0;
@@ -748,6 +811,8 @@ impl NeoFoodClub {
 
 impl NeoFoodClub {
     // URL-related stuff
+
+    /// Creates a URL for the given bets.
     pub fn make_url(&self, bets: &Bets, include_domain: bool, all_data: bool) -> String {
         let mut url = String::new();
 
@@ -805,6 +870,9 @@ impl NeoFoodClub {
         url
     }
 
+    /// Creates a deep copy of the NeoFoodClub object.
+    /// If `model` is None, the model is going to use the default.
+    /// If `modifier` is None, the modifier is going to be empty.
     pub fn copy(&self, model: Option<ProbabilityModel>, modifier: Option<Modifier>) -> NeoFoodClub {
         NeoFoodClub::new(self.round_data.clone(), self.bet_amount, model, modifier)
     }

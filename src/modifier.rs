@@ -7,6 +7,8 @@ use chrono_tz::US::Pacific;
 use crate::round_data::RoundData;
 
 bitflags! {
+    /// A set of flags for modifiers.
+    /// Each one affects the way certain bets are calculated.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ModifierFlags: i32 {
         /// No modifiers
@@ -26,6 +28,12 @@ bitflags! {
     }
 }
 
+/// A struct to represent a modifier.
+/// A modifier is a set of flags that affect the way certain bets are calculated,
+/// as well as custom odds and custom time.
+/// Custom odds is a map of pirate IDs to odds.
+/// Custom time is in NST. When set, this will change the current odds to the opening odds,
+/// and then apply the odds changes up to the custom time, as if making the bets at that time.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Modifier {
     pub value: i32,
@@ -62,28 +70,36 @@ impl Modifier {
 impl Modifier {
     // flags
 
+    /// Returns true if the modifier has no flags.
     pub fn is_empty(&self) -> bool {
         ModifierFlags::from_bits(self.value).unwrap().is_empty()
     }
 
+    /// Returns true if the modifier has the general flag.
+    /// This makes max TER use ER instead of NE.
     pub fn is_general(&self) -> bool {
         ModifierFlags::from_bits(self.value)
             .unwrap()
             .contains(ModifierFlags::GENERAL)
     }
 
+    /// Returns true if the modifier has the opening odds flag.
     pub fn is_opening_odds(&self) -> bool {
         ModifierFlags::from_bits(self.value)
             .unwrap()
             .contains(ModifierFlags::OPENING_ODDS)
     }
 
+    /// Returns true if the modifier has the reverse flag.
+    /// This makes bets use reverse ER odds for calculations.
     pub fn is_reverse(&self) -> bool {
         ModifierFlags::from_bits(self.value)
             .unwrap()
             .contains(ModifierFlags::REVERSE)
     }
 
+    /// Returns true if the modifier has the charity corner flag.
+    /// This makes bets use 15 bets instead of 10.
     pub fn is_charity_corner(&self) -> bool {
         ModifierFlags::from_bits(self.value)
             .unwrap()
@@ -99,6 +115,7 @@ impl Modifier {
         self.custom_odds.is_some() || self.is_opening_odds() || self.custom_time.is_some()
     }
 
+    /// Applies the modifier to the round data and returns a new round data object.
     pub fn apply(&self, round_data: &RoundData) -> RoundData {
         let mut round_data = round_data.clone();
 
@@ -163,6 +180,7 @@ impl Modifier {
         round_data
     }
 
+    /// Returns a deep copy of the modifier.
     pub fn copy(&self) -> Self {
         Self {
             value: self.value,

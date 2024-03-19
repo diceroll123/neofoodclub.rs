@@ -4,6 +4,8 @@ use crate::{
     nfc::NeoFoodClub,
 };
 
+/// A list of pirate names.
+/// Going by the order of the list, the pirate with ID 1 is "Dan", and so on.
 pub const PIRATE_NAMES: [&str; 20] = [
     "Dan",
     "Sproggie",
@@ -28,15 +30,20 @@ pub const PIRATE_NAMES: [&str; 20] = [
 ];
 
 pub trait PartialPirateThings {
+    /// The pirate's name.
     fn get_name(&self) -> &'static str;
+
+    /// The pirate's image URL.
     fn get_image(&self) -> String;
 }
 
+/// A struct representing a partial pirate.
+/// This is used to represent a pirate with minimal data.
 pub struct PartialPirate {
     pub id: usize,
 }
 
-#[allow(dead_code)]
+/// A struct representing a pirate.
 #[derive(Debug, Clone, Copy)]
 pub struct Pirate {
     /// The pirate's ID.
@@ -68,7 +75,7 @@ pub struct Pirate {
 }
 
 impl Pirate {
-    /// The pirate's bet-binary representation.
+    /// The pirate's bet-binary representation in the associated round.
     pub fn binary(&self) -> u32 {
         pirate_binary(self.index, self.arena_id)
     }

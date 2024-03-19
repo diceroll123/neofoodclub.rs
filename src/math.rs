@@ -270,6 +270,7 @@ pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Vec<u32> {
         .collect()
 }
 
+/// Returns the hash value from a given bet indices.
 /// ```
 /// let hash = neofoodclub::math::bets_hash_value(vec![[1, 0, 0, 0, 0]]);
 /// assert_eq!(hash, "faa");

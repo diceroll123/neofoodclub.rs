@@ -20,34 +20,46 @@ pub struct RoundData {
 }
 
 impl RoundData {
+    /// Returns the start time of the round in NST.
+    /// If the start time is not available, returns None.
     pub fn start_nst(&self) -> Option<DateTime<Tz>> {
         self.start
             .as_ref()
             .map(|start| convert_from_utc_to_nst(timestamp_to_utc(start)))
     }
 
+    /// Returns the last change time of the round in NST.
+    /// If the last change time is not available, returns None.
     pub fn last_change_nst(&self) -> Option<DateTime<Tz>> {
         self.lastChange
             .as_ref()
             .map(|last_change| convert_from_utc_to_nst(timestamp_to_utc(last_change)))
     }
 
+    /// Returns the timestamp of the round in NST.
+    /// If the timestamp is not available, returns None.
     pub fn timestamp_nst(&self) -> Option<DateTime<Tz>> {
         self.timestamp
             .as_ref()
             .map(|timestamp| convert_from_utc_to_nst(timestamp_to_utc(timestamp)))
     }
 
+    /// Returns the start time of the round in UTC.
+    /// If the start time is not available, returns None.
     pub fn start_utc(&self) -> Option<DateTime<Utc>> {
         self.start.as_ref().map(|start| timestamp_to_utc(start))
     }
 
+    /// Returns the last change time of the round in UTC.
+    /// If the last change time is not available, returns None.
     pub fn last_change_utc(&self) -> Option<DateTime<Utc>> {
         self.lastChange
             .as_ref()
             .map(|last_change| timestamp_to_utc(last_change))
     }
 
+    /// Returns the timestamp of the round in UTC.
+    /// If the timestamp is not available, returns None.
     pub fn timestamp_utc(&self) -> Option<DateTime<Utc>> {
         self.timestamp
             .as_ref()

@@ -12,6 +12,7 @@ use crate::{
     pirates::PartialPirateThings,
 };
 
+/// A representation of a set of bet amounts
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BetAmounts {
     AmountHash(String),
@@ -20,6 +21,8 @@ pub enum BetAmounts {
 }
 
 impl BetAmounts {
+    /// Returns the bet amounts as a vector of Option<u32>
+    /// If the BetAmounts is None, returns None
     pub fn to_vec(&self) -> Option<Vec<Option<u32>>> {
         match self {
             BetAmounts::AmountHash(hash) => {
@@ -30,6 +33,7 @@ impl BetAmounts {
         }
     }
 
+    /// Creates a new BetAmounts from a length and bet amount
     pub fn from_amount(amount: u32, length: usize) -> Self {
         if length == 0 {
             return BetAmounts::None;
@@ -42,6 +46,7 @@ impl BetAmounts {
         BetAmounts::Amounts(vec![Some(amount); length])
     }
 
+    /// Creates a new BetAmounts from a vector of optional bet amounts
     fn clean_amounts(amounts: Vec<Option<u32>>) -> Vec<Option<u32>> {
         let mut cleaned = amounts.clone();
         while cleaned.last() == Some(&None) {
@@ -51,6 +56,7 @@ impl BetAmounts {
     }
 }
 
+/// A container for a set of bets
 #[derive(Debug, Clone)]
 pub struct Bets {
     pub array_indices: Vec<u16>,
@@ -60,6 +66,7 @@ pub struct Bets {
 }
 
 impl Bets {
+    /// Creates a new Bets struct from a list of indices mapped to the RoundDictData of the NFC object
     pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<BetAmounts>) -> Self {
         let mut bets = Self {
             array_indices: indices.clone(),
@@ -73,6 +80,7 @@ impl Bets {
         bets
     }
 
+    /// Sets the bet amounts for the bets
     pub fn set_bet_amounts(&mut self, amounts: &Option<BetAmounts>) {
         let Some(betamount) = amounts else {
             self.bet_amounts = None;
@@ -96,6 +104,7 @@ impl Bets {
         );
     }
 
+    /// Returns the net expected value of each bet
     pub fn net_expected_list(&self, nfc: &NeoFoodClub) -> Vec<f64> {
         let Some(amounts) = &self.bet_amounts else {
             return vec![];
@@ -112,10 +121,12 @@ impl Bets {
             .collect()
     }
 
+    /// Returns the sum of net expected value of the bets
     pub fn net_expected(&self, nfc: &NeoFoodClub) -> f64 {
         self.net_expected_list(nfc).iter().sum()
     }
 
+    /// Returns the expected return of each bet
     pub fn expected_return_list(&self, nfc: &NeoFoodClub) -> Vec<f64> {
         self.array_indices
             .iter()
@@ -123,6 +134,7 @@ impl Bets {
             .collect()
     }
 
+    /// Returns the sum of expected return of the bets
     pub fn expected_return(&self, nfc: &NeoFoodClub) -> f64 {
         self.expected_return_list(nfc).iter().sum()
     }
@@ -301,6 +313,7 @@ impl Bets {
         nfc.make_url(self, include_domain, all_data)
     }
 
+    /// Returns a table visualization of the bets
     pub fn table(&self, nfc: &NeoFoodClub) -> String {
         let mut table = Table::new();
 
@@ -330,6 +343,7 @@ impl Bets {
         table.to_string()
     }
 
+    /// Returns a table visualization of the bets, with stats
     pub fn stats_table(&self, nfc: &NeoFoodClub) -> String {
         let mut table = Table::new();
 

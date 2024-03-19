@@ -1,4 +1,4 @@
-#[allow(dead_code)]
+/// A struct to represent the likelihood of earning \<value\> units
 #[derive(Debug, Clone)]
 pub struct Chance {
     pub value: u32,

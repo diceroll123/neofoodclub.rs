@@ -9,16 +9,24 @@ use crate::{
 
 pub const ARENA_NAMES: [&str; 5] = ["Shipwreck", "Lagoon", "Treasure", "Hidden", "Harpoon"];
 
+/// Represents an arena for a given round of Food Club.
+/// This struct is not to be constructed manually.
 #[derive(Debug, Clone)]
 pub struct Arena {
+    /// The ID/index of the arena.
     pub id: u8,
+    /// The pirates in the arena. Ordering matters.
     pub pirates: Vec<Pirate>,
+    /// The total odds of the arena.
     pub odds: f64,
+    /// The pirate index of the winning pirate. 0 if no winner.
     pub winner: u8,
+    /// The foods for the arena.
     pub foods: Option<[u8; 10]>,
 }
 
 impl Arena {
+    /// Constructs a new arena from a given round of Food Club.
     pub fn new(id: u8, round_data: &RoundData) -> Arena {
         let mut odds = 0.;
 
@@ -72,7 +80,7 @@ impl Arena {
         }
     }
 
-    /// Returns the name of the arena.
+    /// Returns the name of the arena, can be one of \["Shipwreck", "Lagoon", "Treasure", "Hidden", "Harpoon"\].
     pub fn get_name(&self) -> &'static str {
         ARENA_NAMES[self.id as usize]
     }
