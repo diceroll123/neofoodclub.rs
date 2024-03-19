@@ -1,6 +1,5 @@
 use core::panic;
 use itertools::iproduct;
-use rayon::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 
 use crate::chance::Chance;
@@ -393,7 +392,6 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
     // the first iteration is an empty bet, so we skip it with skip(1)
     let nums: Vec<(u32, f64, u32, f64, u32)> = iproduct!(0..5, 0..5, 0..5, 0..5, 0..5)
         .skip(1)
-        .par_bridge()
         .map(|(a, b, c, d, e)| {
             let mut total_bin: u32 = 0;
             let mut total_probs: f64 = 1.0;
