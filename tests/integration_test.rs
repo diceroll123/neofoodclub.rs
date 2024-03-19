@@ -1069,4 +1069,15 @@ mod tests {
 
         assert_eq!(modifier, new_modifier);
     }
+
+    #[test]
+    fn test_odds_change_data() {
+        let nfc = make_test_nfc();
+
+        let changes = nfc.changes().unwrap();
+        let odds_change = changes.first().unwrap();
+
+        assert_eq!(odds_change.pirate(&nfc).id, 2);
+        assert_eq!(odds_change.arena(), "Lagoon");
+    }
 }
