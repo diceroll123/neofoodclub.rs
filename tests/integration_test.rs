@@ -300,7 +300,7 @@ mod tests {
     fn test_bet_amounts_hash_encoding_and_decoding() {
         // loop from 50 to 70304 in parallel
         (BET_AMOUNT_MIN..BET_AMOUNT_MAX)
-            .into_par_iter() // makes this go from like 1.75s like no time
+            .into_par_iter()
             .for_each(|amount| {
                 let amounts = vec![Some(amount); 10];
                 let hash = math::bet_amounts_to_amounts_hash(&amounts);
