@@ -93,7 +93,7 @@ impl Bets {
         };
 
         if amounts.len() != self.array_indices.len() {
-            panic!("Bet amounts must be the same length as bet indices, or None");
+            panic!("Bet amounts must be the same length as bet indices, or None. Provided: {} Expected {}", amounts.len(), self.array_indices.len());
         }
 
         self.bet_amounts = Some(
