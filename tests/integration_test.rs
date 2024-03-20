@@ -1080,4 +1080,149 @@ mod tests {
         assert_eq!(odds_change.pirate(&nfc).id, 2);
         assert_eq!(odds_change.arena(), "Lagoon");
     }
+
+    #[test]
+    fn test_make_url_all_data() {
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        let url = nfc.make_url(&bets, true, true);
+
+        assert!(url.contains("winners"));
+        assert!(url.contains("timestamp"));
+    }
+
+    #[test]
+    fn test_make_all_max_ter_bets() {
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_all_max_ter_bets();
+
+        assert_eq!(bets.len(), 3124);
+    }
+
+    #[test]
+    fn test_is_outdated_lock() {
+        let nfc = make_test_nfc();
+
+        // our test data is from 2023-05-06
+        // this is probably always going to be true
+        assert!(nfc.is_outdated_lock());
+    }
+
+    #[test]
+    fn test_bets_table() {
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        let table = bets.table(&nfc);
+
+        assert_eq!(
+            table,
+            r#"
++---+-----------+----------+----------+---------+---------+
+| # | Shipwreck | Lagoon   | Treasure | Hidden  | Harpoon |
++=========================================================+
+| 1 |           | Sproggie |          |         |         |
+|---+-----------+----------+----------+---------+---------|
+| 2 |           | Fairfax  |          |         |         |
+|---+-----------+----------+----------+---------+---------|
+| 3 |           | Stuff    |          |         |         |
+|---+-----------+----------+----------+---------+---------|
+| 4 |           | Gooblah  |          | Dan     |         |
+|---+-----------+----------+----------+---------+---------|
+| 5 |           | Gooblah  |          | Stripey |         |
+|---+-----------+----------+----------+---------+---------|
+| 6 |           | Gooblah  |          | Ned     |         |
+|---+-----------+----------+----------+---------+---------|
+| 7 |           | Gooblah  |          | Edmund  |         |
++---+-----------+----------+----------+---------+---------+
+"#
+            .trim()
+        )
+    }
+
+    #[test]
+    fn test_bets_stats_table() {
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        let table = bets.stats_table(&nfc);
+
+        assert_eq!(
+            table,
+            r#"
++---+------+---------+--------+--------+-----------+----------+----------+---------+---------+
+| # | Odds | ER      | MaxBet | Hex    | Shipwreck | Lagoon   | Treasure | Hidden  | Harpoon |
++============================================================================================+
+| 1 | 7    | 1.283:1 | 142858 | 0x2000 |           | Sproggie |          |         |         |
+|---+------+---------+--------+--------+-----------+----------+----------+---------+---------|
+| 2 | 13   | 0.650:1 | 76924  | 0x8000 |           | Fairfax  |          |         |         |
+|---+------+---------+--------+--------+-----------+----------+----------+---------+---------|
+| 3 | 13   | 0.650:1 | 76924  | 0x1000 |           | Stuff    |          |         |         |
+|---+------+---------+--------+--------+-----------+----------+----------+---------+---------|
+| 4 | 4    | 1.477:1 | 250000 | 0x4080 |           | Gooblah  |          | Dan     |         |
+|---+------+---------+--------+--------+-----------+----------+----------+---------+---------|
+| 5 | 20   | 1.692:1 | 50000  | 0x4040 |           | Gooblah  |          | Stripey |         |
+|---+------+---------+--------+--------+-----------+----------+----------+---------+---------|
+| 6 | 12   | 1.577:1 | 83334  | 0x4020 |           | Gooblah  |          | Ned     |         |
+|---+------+---------+--------+--------+-----------+----------+----------+---------+---------|
+| 7 | 12   | 1.577:1 | 83334  | 0x4010 |           | Gooblah  |          | Edmund  |         |
++---+------+---------+--------+--------+-----------+----------+----------+---------+---------+
+"#
+            .trim()
+        )
+    }
+
+    #[test]
+    fn test_is_guaranteed_win_no_bet_amounts() {
+        let nfc = NeoFoodClub::from_json(ROUND_DATA_JSON, None, None, None);
+
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        assert!(!bets.is_guaranteed_win(&nfc));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_set_bet_amounts_panic() {
+        let nfc = make_test_nfc();
+
+        let mut bets = nfc.make_max_ter_bets();
+        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![None; 1])));
+    }
+
+    #[test]
+    fn test_is_guaranteed_win_none_bet_amounts() {
+        let nfc = make_test_nfc();
+
+        let mut bets = nfc.make_max_ter_bets();
+        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(1000),
+        ])));
+
+        assert!(!bets.is_guaranteed_win(&nfc));
+    }
+
+    #[test]
+    fn test_is_guaranteed_win_negative_bet_amounts() {
+        let nfc = make_test_nfc();
+
+        let mut bets = nfc.make_max_ter_bets();
+        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![Some(0); 10])));
+
+        assert!(!bets.is_guaranteed_win(&nfc));
+    }
 }
