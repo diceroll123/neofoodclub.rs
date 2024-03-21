@@ -37,6 +37,10 @@ fn make_test_nfc_from_url() -> NeoFoodClub {
     NeoFoodClub::from_url(ROUND_DATA_URL, Some(BET_AMOUNT), None, None)
 }
 
+fn make_test_nfc_from_url_with_modifier(modifier: Modifier) -> NeoFoodClub {
+    NeoFoodClub::from_url(ROUND_DATA_URL, Some(BET_AMOUNT), None, Some(modifier))
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -1336,5 +1340,57 @@ mod tests {
 
         assert!(!nfc.is_over());
         assert!(!nfc.make_url(&bets, false, true).contains("winners"));
+    }
+
+    #[test]
+    fn test_bustproof_with_one_positive() {
+        let nfc = make_test_nfc_from_url();
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        assert!(bets.is_guaranteed_win(&nfc));
+        assert_eq!(nfc.arenas.positives().len(), 1);
+    }
+
+    #[test]
+    fn test_bustproof_with_three_positives() {
+        let custom_odds = {
+            let mut custom_odds = HashMap::<u8, u8>::new();
+            custom_odds.insert(19, 4);
+            custom_odds.insert(14, 5);
+            custom_odds
+        };
+
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None);
+
+        let nfc = make_test_nfc_from_url_with_modifier(modifier);
+
+        let arenas = nfc.arenas.clone();
+        assert_eq!(arenas.get_pirate_by_id(19).unwrap().current_odds, 4);
+        assert_eq!(arenas.get_pirate_by_id(14).unwrap().current_odds, 5);
+
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        assert!(bets.is_guaranteed_win(&nfc));
+        assert_eq!(arenas.positives().len(), 3);
+    }
+
+    #[test]
+    fn test_bustproof_with_no_positives() {
+        let custom_odds = {
+            let mut custom_odds = HashMap::<u8, u8>::new();
+            custom_odds.insert(9, 2);
+            custom_odds.insert(16, 2);
+            custom_odds.insert(17, 2);
+            custom_odds.insert(18, 2);
+            custom_odds
+        };
+
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None);
+
+        let nfc = make_test_nfc_from_url_with_modifier(modifier);
+
+        let bets = nfc.make_bustproof_bets();
+
+        assert!(bets.is_none());
     }
 }

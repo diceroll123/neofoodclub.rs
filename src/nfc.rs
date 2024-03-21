@@ -134,8 +134,8 @@ impl NeoFoodClub {
                 } else {
                     0
                 },
-            None,
-            None,
+            use_modifier.custom_odds,
+            use_modifier.custom_time,
         );
 
         let temp: RoundDataRaw = serde_qs::from_str(parts[1]).expect("Invalid query string.");
@@ -592,11 +592,8 @@ impl NeoFoodClub {
     pub fn make_bustproof_bets(&self) -> Option<Bets> {
         let positives = self.arenas.positives();
 
-        if positives.is_empty() {
-            return None;
-        }
-
         let bets = match positives.len() {
+            0 => None,
             1 => {
                 // If only one arena is positive, we place 1 bet on each of the pirates of that arena. Total bets = 4.
                 let best_arena = &positives[0];
@@ -657,7 +654,7 @@ impl NeoFoodClub {
 
                 Some(Bets::from_binaries(self, binaries))
             }
-            _ => None,
+            _ => unreachable!("This should never happen."),
         };
 
         // give it bet amounts
