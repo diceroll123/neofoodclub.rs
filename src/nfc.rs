@@ -20,7 +20,7 @@ use crate::pirates::Pirate;
 
 #[allow(non_snake_case)]
 #[derive(Debug, Deserialize)]
-struct RoundDataRaw {
+pub struct RoundDataRaw {
     // as an intermediate step, we use this struct to deserialize the JSON
     foods: Option<String>,
     round: u16,

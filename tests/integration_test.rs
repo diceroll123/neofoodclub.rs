@@ -7,8 +7,12 @@ const ROUND_DATA_JSON: &str = r#"
 {"foods":[[5,20,24,21,18,7,34,29,38,8],[26,24,20,36,33,40,5,13,8,25],[5,29,22,31,40,27,30,4,8,19],[35,19,36,5,12,37,6,3,29,30],[28,24,36,17,18,9,1,33,19,3]],"round":8765,"start":"2023-05-05T23:14:57+00:00","changes":[{"t":"2023-05-06T00:17:30+00:00","new":7,"old":5,"arena":1,"pirate":3},{"t":"2023-05-06T00:21:43+00:00","new":10,"old":8,"arena":3,"pirate":2},{"t":"2023-05-06T00:21:43+00:00","new":6,"old":5,"arena":3,"pirate":3},{"t":"2023-05-06T00:21:43+00:00","new":6,"old":5,"arena":3,"pirate":4},{"t":"2023-05-06T01:09:14+00:00","new":4,"old":3,"arena":4,"pirate":2},{"t":"2023-05-06T01:48:19+00:00","new":3,"old":4,"arena":0,"pirate":4},{"t":"2023-05-06T02:04:11+00:00","new":4,"old":3,"arena":0,"pirate":4},{"t":"2023-05-06T07:29:28+00:00","new":3,"old":4,"arena":0,"pirate":4},{"t":"2023-05-06T09:44:15+00:00","new":5,"old":6,"arena":3,"pirate":3},{"t":"2023-05-06T09:55:08+00:00","new":4,"old":3,"arena":0,"pirate":2},{"t":"2023-05-06T11:11:17+00:00","new":12,"old":11,"arena":0,"pirate":1},{"t":"2023-05-06T16:29:01+00:00","new":11,"old":12,"arena":0,"pirate":1},{"t":"2023-05-06T17:16:30+00:00","new":3,"old":4,"arena":0,"pirate":2},{"t":"2023-05-06T19:16:49+00:00","new":4,"old":5,"arena":2,"pirate":3},{"t":"2023-05-06T19:21:01+00:00","new":6,"old":5,"arena":3,"pirate":3}],"pirates":[[6,11,4,3],[14,15,2,9],[10,16,18,20],[1,12,13,5],[8,19,17,7]],"winners":[3,2,3,2,2],"timestamp":"2023-05-06T23:14:20+00:00","lastChange":"2023-05-06T19:21:01+00:00","currentOdds":[[1,11,3,2,3],[1,13,2,7,13],[1,13,2,4,2],[1,2,10,6,6],[1,13,4,2,4]],"openingOdds":[[1,11,3,2,4],[1,13,2,5,13],[1,13,2,5,2],[1,2,8,5,5],[1,13,3,2,4]]}
 "#;
 
-/// Round 7956
+// Round 7956
 const ROUND_DATA_URL: &str = r#"/#round=7956&pirates=[[2,8,14,11],[20,7,6,10],[19,4,12,15],[3,1,5,13],[17,16,18,9]]&openingOdds=[[1,2,13,3,5],[1,4,2,4,5],[1,3,13,7,2],[1,13,2,3,3],[1,12,2,6,13]]&currentOdds=[[1,2,13,3,5],[1,4,2,4,6],[1,3,13,7,2],[1,13,2,3,3],[1,8,2,4,12]]&foods=[[26,25,4,9,21,1,33,11,7,10],[12,9,14,35,25,6,21,19,40,37],[17,30,21,39,37,15,29,40,31,10],[10,18,35,9,34,23,27,32,28,12],[11,20,9,33,7,14,4,23,31,26]]&winners=[1,3,4,2,4]&timestamp=2021-02-16T23:47:37+00:00"#;
+
+// Modified URLs
+// winners removed
+const ROUND_DATA_URL_NO_WINNERS: &str = r#"/#round=7956&pirates=[[2,8,14,11],[20,7,6,10],[19,4,12,15],[3,1,5,13],[17,16,18,9]]&openingOdds=[[1,2,13,3,5],[1,4,2,4,5],[1,3,13,7,2],[1,13,2,3,3],[1,12,2,6,13]]&currentOdds=[[1,2,13,3,5],[1,4,2,4,6],[1,3,13,7,2],[1,13,2,3,3],[1,8,2,4,12]]&foods=[[26,25,4,9,21,1,33,11,7,10],[12,9,14,35,25,6,21,19,40,37],[17,30,21,39,37,15,29,40,31,10],[10,18,35,9,34,23,27,32,28,12],[11,20,9,33,7,14,4,23,31,26]]&timestamp=2021-02-16T23:47:37+00:00"#;
 
 const BET_AMOUNT: u32 = 8000;
 
@@ -1199,11 +1203,8 @@ mod tests {
     fn test_is_guaranteed_win_none_bet_amounts() {
         let nfc = make_test_nfc();
 
-        let mut bets = nfc.make_max_ter_bets();
+        let mut bets = nfc.make_bustproof_bets().unwrap();
         bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![
-            None,
-            None,
-            None,
             None,
             None,
             None,
@@ -1224,5 +1225,116 @@ mod tests {
         bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![Some(0); 10])));
 
         assert!(!bets.is_guaranteed_win(&nfc));
+    }
+
+    #[test]
+    fn test_invalid_gambit() {
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_bets_from_binaries(vec![0x1]);
+
+        assert!(!bets.is_gambit());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_modifier_new_panic_pirate_id() {
+        let mut custom_odds = HashMap::<u8, u8>::new();
+        custom_odds.insert(21, 13);
+
+        let _modifier = Modifier::new(ModifierFlags::empty().bits(), Some(custom_odds), None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_modifier_new_panic_odds() {
+        let mut custom_odds = HashMap::<u8, u8>::new();
+        custom_odds.insert(1, 14);
+
+        let _modifier = Modifier::new(ModifierFlags::empty().bits(), Some(custom_odds), None);
+    }
+
+    #[test]
+    fn test_modifier_opening_odds() {
+        let modifier = Modifier::new(ModifierFlags::OPENING_ODDS.bits(), None, None);
+
+        let nfc = make_test_nfc_with_modifier(modifier);
+
+        assert_eq!(nfc.current_odds(), nfc.opening_odds());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_from_url_panic() {
+        let _nfc = NeoFoodClub::from_url(
+            format!("{}#aaaaaa", ROUND_DATA_URL).as_str(),
+            None,
+            None,
+            None,
+        );
+    }
+
+    #[test]
+    fn test_from_url_cc_perk() {
+        let nfc =
+            NeoFoodClub::from_url(format!("/15{}", ROUND_DATA_URL).as_str(), None, None, None);
+
+        let bets = nfc.make_max_ter_bets();
+
+        assert!(nfc.modifier.is_charity_corner());
+        assert!(nfc.make_url(&bets, false, false).contains("/15/"))
+    }
+
+    #[test]
+    fn test_get_win_np_no_bet_amount() {
+        let nfc = NeoFoodClub::from_url(ROUND_DATA_URL, None, None, None);
+
+        let bets = nfc.make_bets_from_binaries(vec![0x1]);
+
+        assert_eq!(nfc.get_win_np(&bets), 0)
+    }
+
+    #[test]
+    fn test_winners_none() {
+        let nfc = NeoFoodClub::from_url(ROUND_DATA_URL_NO_WINNERS, None, None, None);
+
+        let mut bets = nfc.make_bets_from_binaries(vec![0x1]);
+        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![Some(8000); 1])));
+
+        assert!(nfc.winning_pirates().is_none());
+        assert_eq!(nfc.winners(), [0; 5]);
+        assert_eq!(nfc.get_win_units(&bets), 0);
+        assert_eq!(nfc.get_win_np(&bets), 0)
+    }
+
+    #[test]
+    fn test_is_over_winners_none() {
+        let nfc = NeoFoodClub::from_url(ROUND_DATA_URL_NO_WINNERS, None, None, None);
+
+        assert!(!nfc.is_over());
+    }
+
+    #[test]
+    fn test_make_winning_gambit_winners_none() {
+        let nfc = NeoFoodClub::from_url(ROUND_DATA_URL_NO_WINNERS, None, None, None);
+
+        assert!(nfc.make_winning_gambit_bets().is_none());
+    }
+
+    #[test]
+    fn test_is_outdated_lock_without_start() {
+        let nfc = NeoFoodClub::from_url(ROUND_DATA_URL, None, None, None);
+
+        assert!(nfc.is_outdated_lock());
+    }
+
+    #[test]
+    fn test_make_url_no_winners() {
+        let nfc = NeoFoodClub::from_url(ROUND_DATA_URL_NO_WINNERS, None, None, None);
+
+        let bets = nfc.make_max_ter_bets();
+
+        assert!(!nfc.is_over());
+        assert!(!nfc.make_url(&bets, false, true).contains("winners"));
     }
 }

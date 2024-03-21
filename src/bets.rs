@@ -282,11 +282,7 @@ impl Bets {
             return false;
         }
 
-        let highest_bet_amount = amounts.iter().max().unwrap().unwrap_or(0);
-
-        if highest_bet_amount == 0 {
-            return false;
-        }
+        let highest_bet_amount = amounts.iter().max().unwrap().unwrap();
 
         // multiply each odds by each bet amount
         let lowest_winning_bet_amount = self
