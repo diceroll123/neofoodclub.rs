@@ -618,6 +618,30 @@ mod tests {
     }
 
     #[test]
+    fn test_is_tenbet_true() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_tenbet_bets(0x88800);
+
+        assert!(bets.unwrap().is_tenbet());
+    }
+
+    #[test]
+    fn test_is_tenbet_false() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_crazy_bets();
+
+        assert!(!bets.is_tenbet());
+    }
+
+    #[test]
+    fn test_is_tenbet_false_and_too_few() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        assert!(!bets.is_tenbet());
+    }
+
+    #[test]
     fn test_bets_is_empty() {
         let nfc = make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
