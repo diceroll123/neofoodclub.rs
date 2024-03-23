@@ -50,6 +50,7 @@ impl Odds {
 
         let most_likely_winner = chances
             .iter()
+            .filter(|o| o.value > 0)
             .max_by(|a, b| a.probability.total_cmp(&b.probability))
             .expect("Chances vector should not be empty")
             .clone();
