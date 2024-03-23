@@ -247,6 +247,24 @@ impl Bets {
         self.bet_binaries.iter().all(|bin| bin.count_ones() == 5)
     }
 
+    /// Returns whether or not this set is a "tenbet" set.
+    /// A tenbet set is a set of bets where all bets have at least one pirate in common.
+    pub fn is_tenbet(&self) -> bool {
+        if self.bet_binaries.len() < 10 {
+            return false;
+        }
+
+        let anded = self
+            .bet_binaries
+            .iter()
+            .cloned()
+            .reduce(|a, b| a & b)
+            .unwrap()
+            .count_ones();
+
+        anded > 0
+    }
+
     /// Returns whether or not this set is a "gambit" set.
     /// The rules for what a gambit is, is *somewhat* arbitrary:
     ///     - The largest integer in the binary representation of the bet set must have five 1's.
