@@ -800,24 +800,26 @@ impl NeoFoodClub {
     // URL-related stuff
 
     /// Creates a URL for the given bets.
-    pub fn make_url(&self, bets: &Bets, include_domain: bool, all_data: bool) -> String {
+    pub fn make_url(&self, bets: Option<&Bets>, include_domain: bool, all_data: bool) -> String {
         let mut url = String::new();
 
         if include_domain {
             url.push_str("https://neofood.club");
         }
 
-        let use_15 = self.modifier.is_charity_corner() || bets.len() > 10;
+        let use_15 = self.modifier.is_charity_corner() || bets.is_some_and(|b| b.len() > 10);
         if use_15 {
             url.push_str("/15");
         }
 
         url.push_str(&format!("/#round={}", self.round()));
 
-        url.push_str(&format!("&b={}", bets.bets_hash()));
+        if let Some(bets) = bets {
+            url.push_str(&format!("&b={}", bets.bets_hash()));
 
-        if let Some(amounts_hash) = bets.amounts_hash() {
-            url.push_str(&format!("&a={}", amounts_hash));
+            if let Some(amounts_hash) = bets.amounts_hash() {
+                url.push_str(&format!("&a={}", amounts_hash));
+            }
         }
 
         if all_data {

@@ -139,7 +139,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        let url = nfc.make_url(&bets, true, false);
+        let url = nfc.make_url(Some(&bets), true, false);
 
         let [(beginning, round_number), (b, bets_hash), (a, amounts_hash)] =
             querystring::querify(&url)[..]
@@ -182,7 +182,7 @@ mod tests {
         let bets = nfc.make_bustproof_bets().unwrap();
 
         assert_eq!(
-            nfc.make_url(&bets, true, false),
+            nfc.make_url(Some(&bets), true, false),
             bets.make_url(&nfc, true, false)
         );
     }
@@ -1119,10 +1119,19 @@ mod tests {
 
         let bets = nfc.make_bustproof_bets().unwrap();
 
-        let url = nfc.make_url(&bets, true, true);
+        let url = nfc.make_url(Some(&bets), true, true);
 
         assert!(url.contains("winners"));
         assert!(url.contains("timestamp"));
+    }
+
+    #[test]
+    fn test_make_url_all_data_no_bets() {
+        let nfc = make_test_nfc();
+
+        let url = nfc.make_url(None, true, false);
+
+        assert_eq!(url, "https://neofood.club/#round=8765");
     }
 
     #[test]
@@ -1310,7 +1319,7 @@ mod tests {
         let bets = nfc.make_max_ter_bets();
 
         assert!(nfc.modifier.is_charity_corner());
-        assert!(nfc.make_url(&bets, false, false).contains("/15/"))
+        assert!(nfc.make_url(Some(&bets), false, false).contains("/15/"))
     }
 
     #[test]
@@ -1363,7 +1372,7 @@ mod tests {
         let bets = nfc.make_max_ter_bets();
 
         assert!(!nfc.is_over());
-        assert!(!nfc.make_url(&bets, false, true).contains("winners"));
+        assert!(!nfc.make_url(Some(&bets), false, true).contains("winners"));
     }
 
     #[test]
