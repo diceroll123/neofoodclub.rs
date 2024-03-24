@@ -29,11 +29,13 @@ impl Odds {
         let mut odds_values = Vec::<u32>::with_capacity(amount_of_bets);
 
         for index in array_indices.iter() {
-            pirate_indices.push(binary_to_indices(nfc.data.bins[*index as usize]));
-            odds_values.push(nfc.data.odds[*index as usize]);
+            pirate_indices.push(binary_to_indices(
+                nfc.round_dict_data().bins[*index as usize],
+            ));
+            odds_values.push(nfc.round_dict_data().odds[*index as usize]);
         }
 
-        let chances = build_chance_objects(&pirate_indices, &odds_values, nfc.stds);
+        let chances = build_chance_objects(&pirate_indices, &odds_values, nfc.probabilities());
 
         let best = chances
             .last()

@@ -70,7 +70,10 @@ impl Bets {
     pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<BetAmounts>) -> Self {
         let mut bets = Self {
             array_indices: indices.clone(),
-            bet_binaries: indices.iter().map(|i| nfc.data.bins[*i as usize]).collect(),
+            bet_binaries: indices
+                .iter()
+                .map(|i| nfc.round_dict_data().bins[*i as usize])
+                .collect(),
             bet_amounts: None,
             odds: Odds::new(nfc, indices),
         };
@@ -114,7 +117,7 @@ impl Bets {
             .iter()
             .zip(amounts.iter())
             .map(|(i, a)| {
-                let er = nfc.data.ers[*i as usize];
+                let er = nfc.round_dict_data().ers[*i as usize];
                 let amount = a.unwrap_or(0) as f64;
                 amount.mul_add(er, -amount)
             })
@@ -130,7 +133,7 @@ impl Bets {
     pub fn expected_return_list(&self, nfc: &NeoFoodClub) -> Vec<f64> {
         self.array_indices
             .iter()
-            .map(|i| nfc.data.ers[*i as usize])
+            .map(|i| nfc.round_dict_data().ers[*i as usize])
             .collect()
     }
 
@@ -167,7 +170,7 @@ impl Bets {
     pub fn from_binaries(nfc: &NeoFoodClub, binaries: Vec<u32>) -> Self {
         // maintaining the order of the binaries is important, at the cost of some performance
         let bin_index_map: std::collections::HashMap<u32, u16> = nfc
-            .data
+            .round_dict_data()
             .bins
             .iter()
             .enumerate()
@@ -318,7 +321,7 @@ impl Bets {
     pub fn odds_values(&self, nfc: &NeoFoodClub) -> Vec<u32> {
         self.array_indices
             .iter()
-            .map(|i| nfc.data.odds[*i as usize])
+            .map(|i| nfc.round_dict_data().odds[*i as usize])
             .collect()
     }
 
@@ -337,7 +340,7 @@ impl Bets {
 
         table.set_header(headers);
 
-        let arenas = nfc.arenas.clone();
+        let arenas = nfc.get_arenas();
 
         for (bet_index, bet_row) in self.get_indices().iter().enumerate() {
             let mut row = vec![(bet_index + 1).to_string()];
@@ -367,7 +370,7 @@ impl Bets {
 
         table.set_header(headers);
 
-        let arenas = nfc.arenas.clone();
+        let arenas = nfc.get_arenas().clone();
 
         for (bet_index, (bet_binary, bet_indices)) in self
             .get_binaries()
@@ -378,16 +381,16 @@ impl Bets {
             let mut row = vec![(bet_index + 1).to_string()];
 
             let bin_index = nfc
-                .data
+                .round_dict_data()
                 .bins
                 .iter()
                 .position(|&r| r == *bet_binary)
                 .unwrap();
 
             row.extend(vec![
-                nfc.data.odds[bin_index].to_string(),
-                format!("{:.3}:1", nfc.data.ers[bin_index]),
-                nfc.data.maxbets[bin_index].to_string(),
+                nfc.round_dict_data().odds[bin_index].to_string(),
+                format!("{:.3}:1", nfc.round_dict_data().ers[bin_index]),
+                nfc.round_dict_data().maxbets[bin_index].to_string(),
                 format!("0x{:X}", bet_binary),
             ]);
 

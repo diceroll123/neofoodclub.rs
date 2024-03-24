@@ -1,3 +1,5 @@
+use std::cell::OnceCell;
+
 use crate::arena::Arenas;
 use crate::bets::Bets;
 use crate::math::{
@@ -48,10 +50,11 @@ pub enum ProbabilityModel {
 pub struct NeoFoodClub {
     pub round_data: RoundData,
     pub bet_amount: Option<u32>,
-    pub arenas: Arenas,
-    pub stds: [[f64; 5]; 5],
-    pub data: RoundDictData,
     pub modifier: Modifier,
+    pub probability_model: ProbabilityModel,
+    arenas: OnceCell<Arenas>,
+    stds: OnceCell<[[f64; 5]; 5]>,
+    data: OnceCell<RoundDictData>,
 }
 
 impl NeoFoodClub {
@@ -71,22 +74,14 @@ impl NeoFoodClub {
             round_data = use_modifier.apply(&round_data);
         }
 
-        let arenas = Arenas::new(&round_data);
-
-        let stds = match model.unwrap_or_default() {
-            ProbabilityModel::OriginalModel => OriginalModel::new(&round_data),
-            ProbabilityModel::MultinomialLogitModel => MultinomialLogitModel::new(&arenas),
-        };
-
-        let data = make_round_dicts(stds, round_data.currentOdds);
-
         let mut nfc = NeoFoodClub {
             round_data: round_data.clone(),
-            arenas,
             bet_amount: None,
-            stds,
-            data,
             modifier: use_modifier,
+            probability_model: model.unwrap_or_default(),
+            arenas: OnceCell::new(),
+            stds: OnceCell::new(),
+            data: OnceCell::new(),
         };
 
         nfc.set_bet_amount(bet_amount);
@@ -97,6 +92,24 @@ impl NeoFoodClub {
     /// Sets the bet amount
     pub fn set_bet_amount(&mut self, amount: Option<u32>) {
         self.bet_amount = amount.map(|x| x.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX));
+    }
+
+    pub fn get_arenas(&self) -> &Arenas {
+        self.arenas.get_or_init(|| Arenas::new(&self.round_data))
+    }
+
+    pub fn probabilities(&self) -> [[f64; 5]; 5] {
+        *self.stds.get_or_init(|| match self.probability_model {
+            ProbabilityModel::OriginalModel => OriginalModel::new(&self.round_data),
+            ProbabilityModel::MultinomialLogitModel => {
+                MultinomialLogitModel::new(self.get_arenas())
+            }
+        })
+    }
+
+    pub fn round_dict_data(&self) -> &RoundDictData {
+        self.data
+            .get_or_init(|| make_round_dicts(self.probabilities(), self.round_data.currentOdds))
     }
 
     /// Creates a NeoFoodClub object from a JSON string.
@@ -189,7 +202,7 @@ impl NeoFoodClub {
             return None;
         }
 
-        Some(self.arenas.get_pirates_from_binary(bin))
+        Some(self.get_arenas().get_pirates_from_binary(bin))
     }
 
     /// Returns whether or not the round is over.
@@ -335,7 +348,7 @@ impl NeoFoodClub {
     /// Returns max-TER indices.
     /// `amount` is the number of indices to return. (normally, this would be 10)
     fn max_ter_indices(&self, amount: usize) -> Vec<u16> {
-        let mut ers = self.data.ers.clone();
+        let mut ers = self.round_dict_data().ers.clone();
 
         let general = self.modifier.is_general();
         let reverse = self.modifier.is_reverse();
@@ -343,7 +356,11 @@ impl NeoFoodClub {
         if !general {
             if let Some(bet_amount) = self.bet_amount {
                 // if there's a bet amount, we use Net Expected instead of Expected Return
-                let maxbets = &self.data.maxbets.iter().map(|&x| x.min(bet_amount) as f64);
+                let maxbets = &self
+                    .round_dict_data()
+                    .maxbets
+                    .iter()
+                    .map(|&x| x.min(bet_amount) as f64);
                 let new_ers: Vec<f64> = maxbets
                     .clone()
                     .zip(ers.iter())
@@ -375,7 +392,7 @@ impl NeoFoodClub {
     /// If `descending` is true, returns highest to lowest.
     /// If `descending` is false, returns lowest to highest.
     fn get_sorted_odds_indices(&self, descending: bool, amount: usize) -> Vec<u16> {
-        let odds = &self.data.odds;
+        let odds = &self.round_dict_data().odds;
 
         let mut binding = argsort_by(odds, &|a: &u32, b: &u32| a.cmp(b));
 
@@ -395,7 +412,7 @@ impl NeoFoodClub {
     /// If `descending` is true, returns highest to lowest.
     /// If `descending` is false, returns lowest to highest.
     fn get_sorted_probs_indices(&self, descending: bool, amount: usize) -> Vec<u16> {
-        let probs = &self.data.probs;
+        let probs = &self.round_dict_data().probs;
 
         let mut binding = argsort_by(probs, &|a: &f64, b: &f64| a.partial_cmp(b).unwrap());
 
@@ -416,7 +433,7 @@ impl NeoFoodClub {
         let max_ter_indices = self.max_ter_indices(3124);
 
         for index in max_ter_indices.iter() {
-            let bin = self.data.bins[*index as usize];
+            let bin = self.round_dict_data().bins[*index as usize];
             if bin.count_ones() == 5 {
                 return bin;
             }
@@ -430,7 +447,7 @@ impl NeoFoodClub {
         // we know there are 1024 full-arena bets
         let mut full_arenas: Vec<u16> = Vec::with_capacity(1024);
 
-        for (index, bin) in self.data.bins.iter().enumerate() {
+        for (index, bin) in self.round_dict_data().bins.iter().enumerate() {
             if bin.count_ones() == 5 {
                 full_arenas.push(index as u16);
             }
@@ -467,7 +484,7 @@ impl NeoFoodClub {
         let mut units_indices = Vec::<u16>::with_capacity(self.max_amount_of_bets());
 
         for index in sorted_probs.iter() {
-            if self.data.odds[*index as usize] >= units {
+            if self.round_dict_data().odds[*index as usize] >= units {
                 units_indices.push(*index);
                 if units_indices.len() == units_indices.capacity() {
                     break;
@@ -519,18 +536,16 @@ impl NeoFoodClub {
 
         let all_indices = self.get_sorted_odds_indices(true, 3124);
 
-        let mut indices = Vec::<u16>::new();
-
-        let max_amount_of_bets = self.max_amount_of_bets();
+        let mut indices = Vec::<u16>::with_capacity(self.max_amount_of_bets());
 
         // get indices of all bets that contain the pirates in the pirates_binary
         for index in all_indices.iter() {
-            let bin = self.data.bins[*index as usize];
+            let bin = self.round_dict_data().bins[*index as usize];
             if bin & pirates_binary == bin {
                 indices.push(*index);
             }
 
-            if indices.len() == max_amount_of_bets {
+            if indices.len() == indices.capacity() {
                 break;
             }
         }
@@ -566,7 +581,7 @@ impl NeoFoodClub {
             .all_full_arenas()
             .choose(&mut rng)
             .expect("No full-arena bets found, somehow");
-        let bin = self.data.bins[index as usize];
+        let bin = self.round_dict_data().bins[index as usize];
 
         self.make_gambit_bets(bin)
     }
@@ -590,7 +605,7 @@ impl NeoFoodClub {
     /// Creates a Bets object that consists of bustproof bets.
     /// Returns None if there are no positive arenas.
     pub fn make_bustproof_bets(&self) -> Option<Bets> {
-        let positives = self.arenas.positives();
+        let positives = self.get_arenas().positives();
 
         let bets = match positives.len() {
             0 => None,
@@ -705,7 +720,7 @@ impl NeoFoodClub {
         let mut bins = Vec::with_capacity(self.max_amount_of_bets());
 
         for index in max_ter_indices.iter() {
-            let bin = self.data.bins[*index as usize];
+            let bin = self.round_dict_data().bins[*index as usize];
             if bin & pirates_binary == pirates_binary {
                 bins.push(bin);
                 if bins.len() == bins.capacity() {
@@ -759,9 +774,9 @@ impl NeoFoodClub {
 
         let mut units = 0;
         for i in bets.array_indices.iter() {
-            let bet_bin = self.data.bins[*i as usize];
+            let bet_bin = self.round_dict_data().bins[*i as usize];
             if bet_bin & winners_binary == bet_bin {
-                units += self.data.odds[*i as usize];
+                units += self.round_dict_data().odds[*i as usize];
             }
         }
 
@@ -785,10 +800,11 @@ impl NeoFoodClub {
         let mut np = 0;
 
         for (bet_index, array_index) in bets.array_indices.iter().enumerate() {
-            let bet_bin = self.data.bins[*array_index as usize];
+            let bet_bin = self.round_dict_data().bins[*array_index as usize];
             if bet_bin & winners_binary == bet_bin {
-                np += (self.data.odds[*array_index as usize] * bet_amounts[bet_index].unwrap_or(0))
-                    .clamp(0, 1_000_000);
+                np += (self.round_dict_data().odds[*array_index as usize]
+                    * bet_amounts[bet_index].unwrap_or(0))
+                .clamp(0, 1_000_000);
             }
         }
 
