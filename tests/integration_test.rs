@@ -376,7 +376,7 @@ mod tests {
     fn test_arena_ratio() {
         let nfc = make_test_nfc();
 
-        let ratio = nfc.arenas.get_arena(0).unwrap().ratio();
+        let ratio = nfc.get_arenas().get_arena(0).unwrap().ratio();
 
         assert!(ratio < 0.0);
     }
@@ -385,7 +385,7 @@ mod tests {
     fn test_arena_is_negative() {
         let nfc = make_test_nfc();
 
-        let arena = nfc.arenas.get_arena(0).unwrap();
+        let arena = nfc.get_arenas().get_arena(0).unwrap();
 
         assert!(arena.is_negative());
     }
@@ -394,7 +394,7 @@ mod tests {
     fn test_arena_name() {
         let nfc = make_test_nfc();
 
-        let arena = nfc.arenas.get_arena(0).unwrap();
+        let arena = nfc.get_arenas().get_arena(0).unwrap();
 
         assert_eq!(arena.get_name(), "Shipwreck");
     }
@@ -403,7 +403,7 @@ mod tests {
     fn test_arena_ids() {
         let nfc = make_test_nfc();
 
-        let arena = nfc.arenas.get_arena(0).unwrap();
+        let arena = nfc.get_arenas().get_arena(0).unwrap();
 
         assert_eq!(arena.ids(), [6, 11, 4, 3]);
     }
@@ -412,7 +412,7 @@ mod tests {
     fn test_arena_get_pirate_by_index() {
         let nfc = make_test_nfc();
 
-        let arena = nfc.arenas.get_arena(0).unwrap();
+        let arena = nfc.get_arenas().get_arena(0).unwrap();
 
         let pirate = arena.get_pirate_by_index(0).unwrap();
 
@@ -423,7 +423,7 @@ mod tests {
     fn test_arenas_get_pirate_by_id() {
         let nfc = make_test_nfc();
 
-        let pirate = nfc.arenas.get_pirate_by_id(1).unwrap();
+        let pirate = nfc.get_arenas().get_pirate_by_id(1).unwrap();
 
         assert_eq!(pirate.get_name(), "Dan");
     }
@@ -432,7 +432,7 @@ mod tests {
     fn test_arenas_get_pirates_by_id() {
         let nfc = make_test_nfc();
 
-        let pirates = nfc.arenas.get_pirates_by_id(&[1, 2, 3]);
+        let pirates = nfc.get_arenas().get_pirates_by_id(&[1, 2, 3]);
 
         assert_eq!(pirates[0].get_name(), "Dan");
         assert_eq!(pirates[1].get_name(), "Sproggie");
@@ -443,7 +443,7 @@ mod tests {
     fn test_arenas_get_all_pirates_flat() {
         let nfc = make_test_nfc();
 
-        let pirates = nfc.arenas.get_all_pirates_flat();
+        let pirates = nfc.get_arenas().get_all_pirates_flat();
 
         assert_eq!(pirates.len(), 20);
     }
@@ -452,7 +452,7 @@ mod tests {
     fn test_arenas_get_pirates_from_binary() {
         let nfc = make_test_nfc();
 
-        let pirates = nfc.arenas.get_pirates_from_binary(0x12480);
+        let pirates = nfc.get_arenas().get_pirates_from_binary(0x12480);
 
         assert_eq!(pirates.len(), 4);
 
@@ -466,7 +466,7 @@ mod tests {
     fn test_arenas_get_all_pirates() {
         let nfc = make_test_nfc();
 
-        let pirates = nfc.arenas.get_all_pirates();
+        let pirates = nfc.get_arenas().get_all_pirates();
 
         assert_eq!(pirates.len(), 5);
     }
@@ -475,7 +475,7 @@ mod tests {
     fn test_arenas_best() {
         let nfc = make_test_nfc();
 
-        let best = nfc.arenas.best();
+        let best = nfc.get_arenas().best();
 
         assert_eq!(best[0].get_name(), "Lagoon");
         assert_eq!(best[1].get_name(), "Hidden");
@@ -488,7 +488,7 @@ mod tests {
     fn test_arenas_pirate_ids() {
         let nfc = make_test_nfc();
 
-        let ids = nfc.arenas.pirate_ids();
+        let ids = nfc.get_arenas().pirate_ids();
 
         assert_eq!(ids[0], &[6, 11, 4, 3]);
     }
@@ -497,7 +497,7 @@ mod tests {
     fn test_partial_pirate_get_image() {
         let nfc = make_test_nfc();
 
-        let pirate = nfc.arenas.get_pirate_by_id(1).unwrap();
+        let pirate = nfc.get_arenas().get_pirate_by_id(1).unwrap();
 
         assert_eq!(
             pirate.get_image(),
@@ -509,7 +509,7 @@ mod tests {
     fn test_pirate_positive_foods() {
         let nfc = make_test_nfc();
 
-        let pirate = nfc.arenas.get_pirate_by_id(1).unwrap();
+        let pirate = nfc.get_arenas().get_pirate_by_id(1).unwrap();
 
         let foods = pirate.positive_foods(&nfc).unwrap();
 
@@ -520,7 +520,7 @@ mod tests {
     fn test_pirate_positive_foods_none() {
         let nfc = make_test_nfc();
 
-        let pirate = nfc.arenas.get_pirate_by_id(4).unwrap();
+        let pirate = nfc.get_arenas().get_pirate_by_id(4).unwrap();
 
         let foods = pirate.positive_foods(&nfc);
 
@@ -531,7 +531,7 @@ mod tests {
     fn test_pirate_negative_foods_none() {
         let nfc = make_test_nfc();
 
-        let pirate = nfc.arenas.get_pirate_by_id(1).unwrap();
+        let pirate = nfc.get_arenas().get_pirate_by_id(1).unwrap();
 
         let foods = pirate.negative_foods(&nfc);
 
@@ -542,7 +542,7 @@ mod tests {
     fn test_pirate_negative_foods() {
         let nfc = make_test_nfc();
 
-        let pirate = nfc.arenas.get_pirate_by_id(2).unwrap();
+        let pirate = nfc.get_arenas().get_pirate_by_id(2).unwrap();
 
         let foods = pirate.negative_foods(&nfc).unwrap();
 
@@ -1381,7 +1381,7 @@ mod tests {
         let bets = nfc.make_bustproof_bets().unwrap();
 
         assert!(bets.is_guaranteed_win(&nfc));
-        assert_eq!(nfc.arenas.positives().len(), 1);
+        assert_eq!(nfc.get_arenas().positives().len(), 1);
     }
 
     #[test]
@@ -1397,7 +1397,7 @@ mod tests {
 
         let nfc = make_test_nfc_from_url_with_modifier(modifier);
 
-        let arenas = nfc.arenas.clone();
+        let arenas = nfc.get_arenas().clone();
         assert_eq!(arenas.get_pirate_by_id(19).unwrap().current_odds, 4);
         assert_eq!(arenas.get_pirate_by_id(14).unwrap().current_odds, 5);
 
