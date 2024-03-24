@@ -1456,15 +1456,35 @@ mod tests {
 
         assert!(nfc.modifier.is_reverse());
 
-        let another_modifier =
-            Modifier::new(ModifierFlags::OPENING_ODDS.bits(), Some(custom_odds), None);
+        let another_modifier = Modifier::new(
+            ModifierFlags::OPENING_ODDS.bits(),
+            Some(custom_odds.clone()),
+            None,
+        );
 
-        nfc.with_modifier(another_modifier);
+        nfc.with_modifier(another_modifier.clone());
 
         assert!(nfc.modifier.is_opening_odds());
 
         let mer = nfc.make_max_ter_bets();
 
         assert_ne!(reverse_mer.get_binaries(), mer.get_binaries());
+
+        let another_another_modifier = Modifier::new(
+            ModifierFlags::EMPTY.bits(),
+            Some(custom_odds),
+            Some(NaiveTime::from_hms_opt(12, 0, 0).unwrap()),
+        );
+
+        nfc.with_modifier(another_another_modifier.clone());
+
+        assert_eq!(
+            another_modifier.custom_odds,
+            another_another_modifier.custom_odds
+        );
+        assert_ne!(
+            another_modifier.custom_time,
+            another_another_modifier.custom_time
+        );
     }
 }
