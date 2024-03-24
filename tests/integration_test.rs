@@ -1432,4 +1432,37 @@ mod tests {
 
         assert!(bets.is_none());
     }
+
+    #[test]
+    fn test_with_modifier() {
+        let custom_odds = {
+            let mut custom_odds = HashMap::<u8, u8>::new();
+            custom_odds.insert(19, 4);
+            custom_odds.insert(14, 5);
+            custom_odds
+        };
+
+        let mut nfc = make_test_nfc();
+
+        assert!(nfc.modifier.is_empty());
+
+        let modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None, None);
+
+        nfc.with_modifier(modifier);
+
+        let reverse_mer = nfc.make_max_ter_bets();
+
+        assert!(nfc.modifier.is_reverse());
+
+        let another_modifier =
+            Modifier::new(ModifierFlags::OPENING_ODDS.bits(), Some(custom_odds), None);
+
+        nfc.with_modifier(another_modifier);
+
+        assert!(nfc.modifier.is_opening_odds());
+
+        let mer = nfc.make_max_ter_bets();
+
+        assert_ne!(reverse_mer.get_binaries(), mer.get_binaries());
+    }
 }
