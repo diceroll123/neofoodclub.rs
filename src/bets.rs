@@ -47,8 +47,8 @@ impl BetAmounts {
     }
 
     /// Creates a new BetAmounts from a vector of optional bet amounts
-    fn clean_amounts(amounts: &Vec<Option<u32>>) -> Vec<Option<u32>> {
-        let mut cleaned = amounts.clone();
+    fn clean_amounts(amounts: &[Option<u32>]) -> Vec<Option<u32>> {
+        let mut cleaned = amounts.to_owned();
         while cleaned.last() == Some(&None) {
             cleaned.pop();
         }
