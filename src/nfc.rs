@@ -223,8 +223,8 @@ impl NeoFoodClub {
 
     /// Returns the start time of the round in ISO 8601 format as a string.
     /// If the start time is not available, returns None.
-    pub fn start(&self) -> Option<String> {
-        self.round_data.start.clone()
+    pub fn start(&self) -> &Option<String> {
+        &self.round_data.start
     }
 
     /// Returns the start time of the round in NST.
@@ -240,8 +240,8 @@ impl NeoFoodClub {
     }
 
     /// Returns the current odds.
-    pub fn current_odds(&self) -> [[u8; 5]; 5] {
-        self.round_data.currentOdds
+    pub fn current_odds(&self) -> &[[u8; 5]; 5] {
+        &self.round_data.currentOdds
     }
 
     /// Returns the custom odds.
@@ -249,7 +249,7 @@ impl NeoFoodClub {
     /// Custom odds is just the resolved changes of a Modifier.
     /// Effectively, this is what we use for calculations.
     pub fn custom_odds(&self) -> [[u8; 5]; 5] {
-        self.round_data.customOdds.unwrap_or(self.current_odds())
+        self.round_data.customOdds.unwrap_or(*self.current_odds())
     }
 
     /// Returns the opening odds.
@@ -258,8 +258,8 @@ impl NeoFoodClub {
     }
 
     /// Returns the timestamp of the round in ISO 8601 format as a string.
-    pub fn timestamp(&self) -> Option<String> {
-        self.round_data.timestamp.clone()
+    pub fn timestamp(&self) -> &Option<String> {
+        &self.round_data.timestamp
     }
 
     /// Returns the timestamp of the round in NST.
@@ -281,14 +281,14 @@ impl NeoFoodClub {
     }
 
     /// Returns the changes of the round.
-    pub fn changes(&self) -> Option<Vec<OddsChange>> {
-        self.round_data.changes.clone()
+    pub fn changes(&self) -> &Option<Vec<OddsChange>> {
+        &self.round_data.changes
     }
 
     /// Returns the last change of the round in ISO 8601 format as a string.
     /// If the last change is not available, returns None.
-    pub fn last_change(&self) -> Option<String> {
-        self.round_data.lastChange.clone()
+    pub fn last_change(&self) -> &Option<String> {
+        &self.round_data.lastChange
     }
 
     /// Returns the last change of the round in NST.
@@ -310,6 +310,8 @@ impl NeoFoodClub {
     }
 
     /// Returns whether or not the modifier has made changes to the round data.
+    /// We use this to determine if we need to recalculate everything
+    /// between
     pub fn modified(&self) -> bool {
         self.round_data.customOdds != Some(self.round_data.currentOdds)
     }
@@ -354,7 +356,7 @@ impl NeoFoodClub {
     /// Returns max-TER indices.
     /// `amount` is the number of indices to return. (normally, this would be 10)
     fn max_ter_indices(&self, amount: usize) -> Vec<u16> {
-        let mut ers = self.round_dict_data().ers.clone();
+        let mut binding: Vec<usize> = Vec::with_capacity(amount);
 
         let general = self.modifier.is_general();
         let reverse = self.modifier.is_reverse();
@@ -362,23 +364,28 @@ impl NeoFoodClub {
         if !general {
             if let Some(bet_amount) = self.bet_amount {
                 // if there's a bet amount, we use Net Expected instead of Expected Return
-                let maxbets = &self
+                let maxbets: Vec<f64> = self
                     .round_dict_data()
                     .maxbets
                     .iter()
-                    .map(|&x| x.min(bet_amount) as f64);
+                    .map(|&x| x.min(bet_amount) as f64)
+                    .collect();
+
                 let new_ers: Vec<f64> = maxbets
-                    .clone()
-                    .zip(ers.iter())
+                    .iter()
+                    .zip(self.round_dict_data().ers.iter())
                     .map(|(maxbet, er)| maxbet * er - maxbet)
                     .collect();
 
-                ers = new_ers;
+                binding = argsort_by(&new_ers, &|a: &f64, b: &f64| a.total_cmp(b));
             }
         }
 
-        // by default, this orders from least to greatest
-        let mut binding = argsort_by(&ers, &|a: &f64, b: &f64| a.total_cmp(b));
+        if binding.is_empty() {
+            binding = argsort_by(&self.round_dict_data().ers, &|a: &f64, b: &f64| {
+                a.total_cmp(b)
+            });
+        }
 
         // since it's reversed to begin with, we reverse it if
         // the modifier does not have the reverse flag
@@ -386,12 +393,7 @@ impl NeoFoodClub {
             binding.reverse();
         }
 
-        binding
-            .iter()
-            .take(amount)
-            .cloned()
-            .map(|i| i as u16)
-            .collect()
+        binding.iter().take(amount).map(|i| *i as u16).collect()
     }
 
     /// Returns sorted indices of odds
@@ -406,12 +408,7 @@ impl NeoFoodClub {
             binding.reverse();
         }
 
-        binding
-            .iter()
-            .take(amount)
-            .cloned()
-            .map(|i| i as u16)
-            .collect()
+        binding.iter().take(amount).map(|i| *i as u16).collect()
     }
 
     /// Returns sorted indices of probabilities
@@ -426,12 +423,7 @@ impl NeoFoodClub {
             binding.reverse();
         }
 
-        binding
-            .iter()
-            .take(amount)
-            .cloned()
-            .map(|i| i as u16)
-            .collect()
+        binding.iter().take(amount).map(|i| *i as u16).collect()
     }
 
     /// Return the binary representation of the highest expected return full-arena bet.
@@ -517,7 +509,7 @@ impl NeoFoodClub {
 
         let chosen_values: Vec<u16> = values
             .choose_multiple(&mut rng, self.max_amount_of_bets())
-            .cloned()
+            .copied()
             .collect();
 
         let mut bets = Bets::new(self, chosen_values, None);
@@ -870,8 +862,7 @@ impl NeoFoodClub {
                 params.push(("winners", winners_string.as_str()));
             }
 
-            let timestamp = self.timestamp().unwrap_or_default();
-            if !timestamp.is_empty() {
+            if let Some(timestamp) = self.timestamp().as_ref() {
                 params.push(("timestamp", timestamp.as_str()));
             }
 

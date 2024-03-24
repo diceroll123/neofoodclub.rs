@@ -48,7 +48,7 @@ impl Modifier {
         custom_time: Option<NaiveTime>,
     ) -> Self {
         // loop through custom_odds if it's not None and check if the keys are between 1-20 and the values are between 2-13
-        if let Some(custom_odds) = custom_odds.clone() {
+        if let Some(custom_odds) = custom_odds.as_ref() {
             for (key, value) in custom_odds.iter() {
                 if *key < 1 || *key > 20 {
                     panic!("Invalid pirate ID, need 1-20, got {}", *key);
@@ -140,7 +140,7 @@ impl Modifier {
                         .collect::<Vec<_>>();
 
                     if !new_changes.is_empty() {
-                        for change in new_changes.clone() {
+                        for change in new_changes.iter() {
                             temp_odds[change.arena_index()][change.pirate_index()] = change.new;
                         }
 
