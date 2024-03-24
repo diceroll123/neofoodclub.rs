@@ -55,6 +55,9 @@ pub struct NeoFoodClub {
     arenas: OnceCell<Arenas>,
     stds: OnceCell<[[f64; 5]; 5]>,
     data: OnceCell<RoundDictData>,
+    max_ter_indices: OnceCell<Vec<usize>>,
+    net_expected_indices: OnceCell<Vec<f64>>,
+    clamped_max_bets: OnceCell<Vec<u32>>,
 }
 
 impl NeoFoodClub {
@@ -79,6 +82,9 @@ impl NeoFoodClub {
             arenas: OnceCell::new(),
             stds: OnceCell::new(),
             data: OnceCell::new(),
+            max_ter_indices: OnceCell::new(),
+            net_expected_indices: OnceCell::new(),
+            clamped_max_bets: OnceCell::new(),
         };
 
         nfc.set_bet_amount(bet_amount);
@@ -89,6 +95,7 @@ impl NeoFoodClub {
     /// Sets the bet amount
     pub fn set_bet_amount(&mut self, amount: Option<u32>) {
         self.bet_amount = amount.map(|x| x.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX));
+        self.clamped_max_bets = OnceCell::new();
     }
 
     /// Lazy loads the Arenas object.
@@ -117,6 +124,9 @@ impl NeoFoodClub {
         self.arenas = OnceCell::new();
         self.stds = OnceCell::new();
         self.data = OnceCell::new();
+        self.clamped_max_bets = OnceCell::new();
+        self.max_ter_indices = OnceCell::new();
+        self.net_expected_indices = OnceCell::new();
         self.round_data.customOdds = None;
     }
 
@@ -385,37 +395,50 @@ impl NeoFoodClub {
 
     /// Returns max-TER indices.
     /// `amount` is the number of indices to return. (normally, this would be 10)
-    fn max_ter_indices(&self, amount: usize) -> Vec<u16> {
-        let mut binding: Vec<usize> = Vec::with_capacity(amount);
-
-        let general = self.modifier.is_general();
+    fn max_ter_indices(&self) -> Vec<usize> {
         let reverse = self.modifier.is_reverse();
+        let mut binding = self
+            .max_ter_indices
+            .get_or_init(|| {
+                let mut binding: Vec<usize> = Vec::with_capacity(3124);
 
-        if !general {
-            if let Some(bet_amount) = self.bet_amount {
-                // if there's a bet amount, we use Net Expected instead of Expected Return
-                let maxbets: Vec<f64> = self
-                    .round_dict_data()
-                    .maxbets
-                    .iter()
-                    .map(|&x| x.min(bet_amount) as f64)
-                    .collect();
+                let general = self.modifier.is_general();
 
-                let new_ers: Vec<f64> = maxbets
-                    .iter()
-                    .zip(self.round_dict_data().ers.iter())
-                    .map(|(maxbet, er)| maxbet * er - maxbet)
-                    .collect();
+                if !general {
+                    if let Some(bet_amount) = self.bet_amount {
+                        // if there's a bet amount, we use Net Expected instead of Expected Return
+                        let maxbets: &Vec<u32> = self.clamped_max_bets.get_or_init(|| {
+                            self.round_dict_data()
+                                .maxbets
+                                .iter()
+                                .map(|&x| x.min(bet_amount))
+                                .collect()
+                        });
 
-                binding = argsort_by(&new_ers, &|a: &f64, b: &f64| a.total_cmp(b));
-            }
-        }
+                        let new_ers: &Vec<f64> = self.net_expected_indices.get_or_init(|| {
+                            maxbets
+                                .iter()
+                                .zip(self.round_dict_data().ers.iter())
+                                .map(|(maxbet, er)| {
+                                    let mb = *maxbet as f64;
+                                    mb * er - mb
+                                })
+                                .collect()
+                        });
 
-        if binding.is_empty() {
-            binding = argsort_by(&self.round_dict_data().ers, &|a: &f64, b: &f64| {
-                a.total_cmp(b)
-            });
-        }
+                        binding = argsort_by(new_ers, &|a: &f64, b: &f64| a.total_cmp(b));
+                    }
+                }
+
+                if binding.is_empty() {
+                    binding = argsort_by(&self.round_dict_data().ers, &|a: &f64, b: &f64| {
+                        a.total_cmp(b)
+                    });
+                }
+
+                binding
+            })
+            .to_vec();
 
         // since it's reversed to begin with, we reverse it if
         // the modifier does not have the reverse flag
@@ -423,13 +446,13 @@ impl NeoFoodClub {
             binding.reverse();
         }
 
-        binding.iter().take(amount).map(|i| *i as u16).collect()
+        binding
     }
 
     /// Returns sorted indices of odds
     /// If `descending` is true, returns highest to lowest.
     /// If `descending` is false, returns lowest to highest.
-    fn get_sorted_odds_indices(&self, descending: bool, amount: usize) -> Vec<u16> {
+    fn get_sorted_odds_indices(&self, descending: bool, amount: usize) -> Vec<usize> {
         let odds = &self.round_dict_data().odds;
 
         let mut binding = argsort_by(odds, &|a: &u32, b: &u32| a.cmp(b));
@@ -438,13 +461,13 @@ impl NeoFoodClub {
             binding.reverse();
         }
 
-        binding.iter().take(amount).map(|i| *i as u16).collect()
+        binding.iter().take(amount).cloned().collect()
     }
 
     /// Returns sorted indices of probabilities
     /// If `descending` is true, returns highest to lowest.
     /// If `descending` is false, returns lowest to highest.
-    fn get_sorted_probs_indices(&self, descending: bool, amount: usize) -> Vec<u16> {
+    fn get_sorted_probs_indices(&self, descending: bool, amount: usize) -> Vec<usize> {
         let probs = &self.round_dict_data().probs;
 
         let mut binding = argsort_by(probs, &|a: &f64, b: &f64| a.partial_cmp(b).unwrap());
@@ -453,15 +476,15 @@ impl NeoFoodClub {
             binding.reverse();
         }
 
-        binding.iter().take(amount).map(|i| *i as u16).collect()
+        binding.iter().take(amount).copied().collect()
     }
 
     /// Return the binary representation of the highest expected return full-arena bet.
     fn get_highest_er_full_bet(&self) -> u32 {
-        let max_ter_indices = self.max_ter_indices(3124);
+        let max_ter_indices = self.max_ter_indices();
 
         for index in max_ter_indices.iter() {
-            let bin = self.round_dict_data().bins[*index as usize];
+            let bin = self.round_dict_data().bins[*index];
             if bin.count_ones() == 5 {
                 return bin;
             }
@@ -471,13 +494,13 @@ impl NeoFoodClub {
     }
 
     /// Returns all full-arena indices.
-    fn all_full_arenas(&self) -> Vec<u16> {
+    fn all_full_arenas(&self) -> Vec<usize> {
         // we know there are 1024 full-arena bets
-        let mut full_arenas: Vec<u16> = Vec::with_capacity(1024);
+        let mut full_arenas: Vec<usize> = Vec::with_capacity(1024);
 
         for (index, bin) in self.round_dict_data().bins.iter().enumerate() {
             if bin.count_ones() == 5 {
-                full_arenas.push(index as u16);
+                full_arenas.push(index);
             }
         }
 
@@ -497,9 +520,9 @@ impl NeoFoodClub {
     /// Creates a Bets object that consists of all max-TER bets.
     /// This is mostly for debugging purposes.
     pub fn make_all_max_ter_bets(&self) -> Bets {
-        let indices = self.max_ter_indices(3124);
+        let indices = self.max_ter_indices();
 
-        let mut bets = Bets::new(self, indices, None);
+        let mut bets = Bets::new(self, indices.to_vec(), None);
         bets.fill_bet_amounts(self);
         bets
     }
@@ -509,10 +532,10 @@ impl NeoFoodClub {
     pub fn make_units_bets(&self, units: u32) -> Option<Bets> {
         let sorted_probs = self.get_sorted_probs_indices(true, 3124);
 
-        let mut units_indices = Vec::<u16>::with_capacity(self.max_amount_of_bets());
+        let mut units_indices = Vec::<usize>::with_capacity(self.max_amount_of_bets());
 
         for index in sorted_probs.iter() {
-            if self.round_dict_data().odds[*index as usize] >= units {
+            if self.round_dict_data().odds[*index] >= units {
                 units_indices.push(*index);
                 if units_indices.len() == units_indices.capacity() {
                     break;
@@ -535,9 +558,9 @@ impl NeoFoodClub {
     /// Following these bets is not recommended.
     pub fn make_random_bets(&self) -> Bets {
         let mut rng = rand::thread_rng();
-        let values: Vec<u16> = (0..3124).collect();
+        let values: Vec<usize> = (0..3124).collect();
 
-        let chosen_values: Vec<u16> = values
+        let chosen_values: Vec<usize> = values
             .choose_multiple(&mut rng, self.max_amount_of_bets())
             .copied()
             .collect();
@@ -549,7 +572,12 @@ impl NeoFoodClub {
 
     /// Creates a Bets object that consists of max-TER bets.
     pub fn make_max_ter_bets(&self) -> Bets {
-        let indices = self.max_ter_indices(self.max_amount_of_bets());
+        let indices = self
+            .max_ter_indices()
+            .iter()
+            .take(self.max_amount_of_bets())
+            .cloned()
+            .collect();
 
         let mut bets = Bets::new(self, indices, None);
         bets.fill_bet_amounts(self);
@@ -564,11 +592,11 @@ impl NeoFoodClub {
 
         let all_indices = self.get_sorted_odds_indices(true, 3124);
 
-        let mut indices = Vec::<u16>::with_capacity(self.max_amount_of_bets());
+        let mut indices = Vec::<usize>::with_capacity(self.max_amount_of_bets());
 
         // get indices of all bets that contain the pirates in the pirates_binary
         for index in all_indices.iter() {
-            let bin = self.round_dict_data().bins[*index as usize];
+            let bin = self.round_dict_data().bins[*index];
             if bin & pirates_binary == bin {
                 indices.push(*index);
             }
@@ -619,7 +647,7 @@ impl NeoFoodClub {
     /// Following these bets is not recommended.
     pub fn make_crazy_bets(&self) -> Bets {
         let mut rng = rand::thread_rng();
-        let mut crazy_bet_indices: Vec<u16> = self.all_full_arenas();
+        let mut crazy_bet_indices: Vec<usize> = self.all_full_arenas();
 
         crazy_bet_indices.shuffle(&mut rng);
 
@@ -743,12 +771,12 @@ impl NeoFoodClub {
             return Err("You must pick 3 pirates at most.".to_string());
         }
 
-        let max_ter_indices = self.max_ter_indices(3124);
+        let max_ter_indices = self.max_ter_indices();
 
         let mut bins = Vec::with_capacity(self.max_amount_of_bets());
 
         for index in max_ter_indices.iter() {
-            let bin = self.round_dict_data().bins[*index as usize];
+            let bin = self.round_dict_data().bins[*index];
             if bin & pirates_binary == pirates_binary {
                 bins.push(bin);
                 if bins.len() == bins.capacity() {
@@ -802,9 +830,9 @@ impl NeoFoodClub {
 
         let mut units = 0;
         for i in bets.array_indices.iter() {
-            let bet_bin = self.round_dict_data().bins[*i as usize];
+            let bet_bin = self.round_dict_data().bins[*i];
             if bet_bin & winners_binary == bet_bin {
-                units += self.round_dict_data().odds[*i as usize];
+                units += self.round_dict_data().odds[*i];
             }
         }
 
@@ -828,9 +856,9 @@ impl NeoFoodClub {
         let mut np = 0;
 
         for (bet_index, array_index) in bets.array_indices.iter().enumerate() {
-            let bet_bin = self.round_dict_data().bins[*array_index as usize];
+            let bet_bin = self.round_dict_data().bins[*array_index];
             if bet_bin & winners_binary == bet_bin {
-                np += (self.round_dict_data().odds[*array_index as usize]
+                np += (self.round_dict_data().odds[*array_index]
                     * bet_amounts[bet_index].unwrap_or(0))
                 .clamp(0, 1_000_000);
             }
