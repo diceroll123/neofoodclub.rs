@@ -1,4 +1,5 @@
 use std::cell::OnceCell;
+use std::collections::HashSet;
 
 use crate::arena::Arenas;
 use crate::bets::Bets;
@@ -14,6 +15,7 @@ use chrono_tz::Tz;
 use itertools::Itertools;
 use querystring::stringify;
 use rand::seq::SliceRandom;
+use rand::Rng;
 use serde::Deserialize;
 
 use crate::models::multinomial_logit::MultinomialLogitModel;
@@ -492,20 +494,6 @@ impl NeoFoodClub {
 
         unreachable!("No full-arena bets found, somehow");
     }
-
-    /// Returns all full-arena indices.
-    fn all_full_arenas(&self) -> Vec<usize> {
-        // we know there are 1024 full-arena bets
-        let mut full_arenas: Vec<usize> = Vec::with_capacity(1024);
-
-        for (index, bin) in self.round_dict_data().bins.iter().enumerate() {
-            if bin.count_ones() == 5 {
-                full_arenas.push(index);
-            }
-        }
-
-        full_arenas
-    }
 }
 
 impl NeoFoodClub {
@@ -633,13 +621,16 @@ impl NeoFoodClub {
     /// Picks a random full-arena bet and makes a gambit out of it
     pub fn make_random_gambit_bets(&self) -> Bets {
         let mut rng = rand::thread_rng();
-        let index = *self
-            .all_full_arenas()
-            .choose(&mut rng)
-            .expect("No full-arena bets found, somehow");
-        let bin = self.round_dict_data().bins[index as usize];
 
-        self.make_gambit_bets(bin)
+        let random_full_binary = pirates_binary([
+            rng.gen_range(1..=4),
+            rng.gen_range(1..=4),
+            rng.gen_range(1..=4),
+            rng.gen_range(1..=4),
+            rng.gen_range(1..=4),
+        ]);
+
+        self.make_gambit_bets(random_full_binary)
     }
 
     /// Creates a Bets object that consits of "crazy" bets.
@@ -647,13 +638,20 @@ impl NeoFoodClub {
     /// Following these bets is not recommended.
     pub fn make_crazy_bets(&self) -> Bets {
         let mut rng = rand::thread_rng();
-        let mut crazy_bet_indices: Vec<usize> = self.all_full_arenas();
+        let mut binaries: HashSet<u32> = HashSet::with_capacity(self.max_amount_of_bets());
 
-        crazy_bet_indices.shuffle(&mut rng);
+        while binaries.len() < binaries.capacity() {
+            let random_full_binary = pirates_binary([
+                rng.gen_range(1..=4),
+                rng.gen_range(1..=4),
+                rng.gen_range(1..=4),
+                rng.gen_range(1..=4),
+                rng.gen_range(1..=4),
+            ]);
+            binaries.insert(random_full_binary);
+        }
 
-        crazy_bet_indices.truncate(self.max_amount_of_bets());
-
-        let mut bets = Bets::new(self, crazy_bet_indices, None);
+        let mut bets = Bets::from_binaries(self, binaries.into_iter().collect::<Vec<u32>>());
         bets.fill_bet_amounts(self);
         bets
     }
@@ -682,9 +680,11 @@ impl NeoFoodClub {
                 // 1 bet on each of the pirates of the second arena + the best pirate of the best arena. Total bets = 7
                 let (best_arena, second_best_arena) = (&positives[0], &positives[1]);
 
-                let best_pirate_binary = best_arena.best()[0].binary();
+                let best_in_best_arena = best_arena.best();
 
-                let binaries: Vec<u32> = best_arena.best()[1..]
+                let best_pirate_binary = best_in_best_arena[0].binary();
+
+                let binaries: Vec<u32> = best_in_best_arena[1..]
                     .iter()
                     .map(|pirate| pirate.binary())
                     .chain(
@@ -707,14 +707,17 @@ impl NeoFoodClub {
                 let (best_arena, second_best_arena, third_best_arena) =
                     (&positives[0], &positives[1], &positives[2]);
 
-                let best_pirate_binary = best_arena.best()[0].binary();
-                let second_best_pirate_binary = second_best_arena.best()[0].binary();
+                let best_in_best_arena = best_arena.best();
+                let best_in_second_best_arena = second_best_arena.best();
 
-                let binaries: Vec<u32> = best_arena.best()[1..]
+                let best_pirate_binary = best_in_best_arena[0].binary();
+                let second_best_pirate_binary = best_in_second_best_arena[0].binary();
+
+                let binaries: Vec<u32> = best_in_best_arena[1..]
                     .iter()
                     .map(|pirate| pirate.binary())
                     .chain(
-                        second_best_arena.best()[1..]
+                        best_in_second_best_arena[1..]
                             .iter()
                             .map(|pirate| pirate.binary() | best_pirate_binary),
                     )
