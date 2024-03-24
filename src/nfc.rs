@@ -921,10 +921,25 @@ fn validate_round_data(round_data: &RoundData) {
         panic!("Pirates must have 5 arenas.");
     }
 
+    let mut pirate_ids = Vec::<u8>::with_capacity(20);
+
     for arena in round_data.pirates.iter() {
         if arena.len() != 4 {
             panic!("Each arena must have 4 pirates.");
         }
+        for pirate in arena.iter() {
+            if pirate_ids.contains(pirate) {
+                panic!("Pirates must be unique.");
+            }
+            if !(&1..=&20).contains(&pirate) {
+                panic!("Pirate IDs must be between 1 and 20.");
+            }
+            pirate_ids.push(*pirate);
+        }
+    }
+
+    if pirate_ids.len() != 20 {
+        panic!("Pirates must have 20 unique IDs.");
     }
 
     if round_data.currentOdds.len() != 5 {
