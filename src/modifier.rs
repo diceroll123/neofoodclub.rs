@@ -108,20 +108,11 @@ impl Modifier {
 }
 
 impl Modifier {
-    /// If the modifier has custom odds or opening odds, this returns true.
-    /// Basically, this is a marker to know whether or not this
-    /// modifier edits food club data, meaning we will not store it anywhere.
-    pub fn modified(&self) -> bool {
-        self.custom_odds.is_some() || self.is_opening_odds() || self.custom_time.is_some()
-    }
-
     /// Applies the modifier to the round data and returns a new round data object.
-    pub fn apply(&self, round_data: &RoundData) -> RoundData {
-        let mut round_data = round_data.clone();
-
+    pub fn apply(&self, round_data: &mut RoundData) {
         // first, apply opening odds to current odds if necessary
         if self.is_opening_odds() {
-            round_data.currentOdds = round_data.openingOdds;
+            round_data.customOdds = Some(round_data.openingOdds);
         }
 
         // apply custom time if necessary
@@ -129,7 +120,7 @@ impl Modifier {
         if let Some(start_time_as_nst) = &round_data.start_nst() {
             if let Some(custom_time) = &self.custom_time {
                 if let Some(changes) = &round_data.changes {
-                    round_data.currentOdds = round_data.openingOdds; // as a starting point
+                    let mut temp_odds = round_data.openingOdds; // as a starting point
 
                     let mut custom_time = start_time_as_nst
                         .date_naive()
@@ -150,20 +141,22 @@ impl Modifier {
 
                     if !new_changes.is_empty() {
                         for change in new_changes.clone() {
-                            round_data.currentOdds[change.arena_index()][change.pirate_index()] =
-                                change.new;
+                            temp_odds[change.arena_index()][change.pirate_index()] = change.new;
                         }
 
                         round_data.changes = Some(new_changes);
                     } else {
                         round_data.changes = None;
                     }
+
+                    round_data.customOdds = Some(temp_odds);
                 }
             }
         }
 
         // then, apply custom odds if necessary
         if let Some(custom_odds) = &self.custom_odds {
+            let mut temp_odds = round_data.customOdds.unwrap_or(round_data.currentOdds);
             round_data
                 .pirates
                 .iter()
@@ -171,13 +164,13 @@ impl Modifier {
                 .for_each(|(arena_index, arena)| {
                     arena.iter().enumerate().for_each(|(pirate_index, pirate)| {
                         if let Some(odds) = custom_odds.get(pirate) {
-                            round_data.currentOdds[arena_index][pirate_index + 1] = *odds;
+                            temp_odds[arena_index][pirate_index + 1] = *odds;
                         }
                     });
                 });
-        }
 
-        round_data
+            round_data.customOdds = Some(temp_odds);
+        }
     }
 
     /// Returns a deep copy of the modifier.

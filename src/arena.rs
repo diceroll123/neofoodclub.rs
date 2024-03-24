@@ -30,13 +30,15 @@ impl Arena {
     pub fn new(id: u8, round_data: &RoundData) -> Arena {
         let mut odds = 0.;
 
+        let use_odds = round_data.customOdds.unwrap_or(round_data.currentOdds);
+
         // the pirate index of the winning pirate
         let winner = round_data.winners.unwrap_or([0; 5])[id as usize];
 
         let mut pirates: Vec<Pirate> = Vec::with_capacity(5);
         for (index, pirate_id) in round_data.pirates[id as usize].iter().enumerate() {
             let p_id = pirate_id.to_owned();
-            let current_odds = round_data.currentOdds[id as usize][index + 1];
+            let current_odds = use_odds[id as usize][index + 1];
 
             let mut pfa: Option<u8> = None;
             let mut nfa: Option<i8> = None;

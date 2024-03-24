@@ -12,6 +12,7 @@ pub struct RoundData {
     pub start: Option<String>,
     pub pirates: [[u8; 4]; 5],
     pub currentOdds: [[u8; 5]; 5],
+    pub customOdds: Option<[[u8; 5]; 5]>,
     pub openingOdds: [[u8; 5]; 5],
     pub winners: Option<[u8; 5]>,
     pub timestamp: Option<String>,
