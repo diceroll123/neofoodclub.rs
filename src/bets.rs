@@ -26,9 +26,9 @@ impl BetAmounts {
     pub fn to_vec(&self) -> Option<Vec<Option<u32>>> {
         match self {
             BetAmounts::AmountHash(hash) => {
-                Some(Self::clean_amounts(amounts_hash_to_bet_amounts(hash)))
+                Some(Self::clean_amounts(&amounts_hash_to_bet_amounts(hash)))
             }
-            BetAmounts::Amounts(amounts) => Some(Self::clean_amounts(amounts.clone())),
+            BetAmounts::Amounts(amounts) => Some(Self::clean_amounts(amounts)),
             BetAmounts::None => None,
         }
     }
@@ -47,8 +47,8 @@ impl BetAmounts {
     }
 
     /// Creates a new BetAmounts from a vector of optional bet amounts
-    fn clean_amounts(amounts: Vec<Option<u32>>) -> Vec<Option<u32>> {
-        let mut cleaned = amounts.clone();
+    fn clean_amounts(amounts: &[Option<u32>]) -> Vec<Option<u32>> {
+        let mut cleaned = amounts.to_owned();
         while cleaned.last() == Some(&None) {
             cleaned.pop();
         }
@@ -222,8 +222,8 @@ impl Bets {
     }
 
     /// Returns the bet binaries
-    pub fn get_binaries(&self) -> Vec<u32> {
-        self.bet_binaries.clone()
+    pub fn get_binaries(&self) -> &Vec<u32> {
+        &self.bet_binaries
     }
 
     /// Returns a string of the hash of the bets
@@ -260,8 +260,13 @@ impl Bets {
         let anded = self
             .bet_binaries
             .iter()
-            .cloned()
-            .reduce(|a, b| a & b)
+            .fold(None, |acc, &b| {
+                if let Some(result) = acc {
+                    Some(result & b)
+                } else {
+                    Some(b)
+                }
+            })
             .unwrap()
             .count_ones();
 
@@ -370,7 +375,7 @@ impl Bets {
 
         table.set_header(headers);
 
-        let arenas = nfc.get_arenas().clone();
+        let arenas = nfc.get_arenas();
 
         for (bet_index, (bet_binary, bet_indices)) in self
             .get_binaries()

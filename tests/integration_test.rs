@@ -654,7 +654,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
-        let binaries = bets.unwrap().get_binaries();
+        let binaries = bets.as_ref().unwrap().get_binaries();
 
         assert_eq!(binaries.len(), 10);
     }
@@ -845,9 +845,9 @@ mod tests {
     #[test]
     fn test_datetime() {
         let nfc = make_test_nfc();
-        let start = nfc.start().unwrap();
+        let start = nfc.start().as_ref().unwrap();
 
-        let dt = chrono::DateTime::parse_from_rfc3339(&start)
+        let dt = chrono::DateTime::parse_from_rfc3339(start)
             .unwrap()
             .with_timezone(&chrono::Utc);
 
@@ -919,9 +919,9 @@ mod tests {
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
-        let modified_length = nfc.changes().unwrap().len();
+        let modified_length = nfc.changes().as_ref().unwrap().len();
 
-        let control_length = control_nfc.changes().unwrap().len();
+        let control_length = control_nfc.changes().as_ref().unwrap().len();
 
         assert_ne!(modified_length, control_length);
     }
@@ -945,7 +945,7 @@ mod tests {
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
-        assert_eq!(nfc.changes().unwrap().len(), 4);
+        assert_eq!(nfc.changes().as_ref().unwrap().len(), 4);
     }
 
     #[test]
@@ -956,7 +956,7 @@ mod tests {
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
-        assert_eq!(nfc.changes().unwrap().len(), 14);
+        assert_eq!(nfc.changes().as_ref().unwrap().len(), 14);
     }
 
     #[test]
@@ -1016,14 +1016,20 @@ mod tests {
     fn test_timestamp() {
         let nfc = make_test_nfc();
 
-        assert_eq!(nfc.timestamp().unwrap(), "2023-05-06T23:14:20+00:00");
+        assert_eq!(
+            nfc.timestamp().as_ref().unwrap(),
+            "2023-05-06T23:14:20+00:00"
+        );
     }
 
     #[test]
     fn test_last_change() {
         let nfc = make_test_nfc();
 
-        assert_eq!(nfc.last_change().unwrap(), "2023-05-06T19:21:01+00:00");
+        assert_eq!(
+            nfc.last_change().as_ref().unwrap(),
+            "2023-05-06T19:21:01+00:00"
+        );
     }
 
     #[test]
@@ -1106,7 +1112,7 @@ mod tests {
     fn test_odds_change_data() {
         let nfc = make_test_nfc();
 
-        let changes = nfc.changes().unwrap();
+        let changes = nfc.changes().as_ref().unwrap();
         let odds_change = changes.first().unwrap();
 
         assert_eq!(odds_change.pirate(&nfc).id, 2);
@@ -1397,7 +1403,7 @@ mod tests {
 
         let nfc = make_test_nfc_from_url_with_modifier(modifier);
 
-        let arenas = nfc.get_arenas().clone();
+        let arenas = nfc.get_arenas();
         assert_eq!(arenas.get_pirate_by_id(19).unwrap().current_odds, 4);
         assert_eq!(arenas.get_pirate_by_id(14).unwrap().current_odds, 5);
 

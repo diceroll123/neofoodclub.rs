@@ -192,20 +192,19 @@ impl Arenas {
     }
 
     /// Returns the positive arenas, sorted by best odds.
-    pub fn positives(&self) -> Vec<Arena> {
-        let mut positives: Vec<Arena> = self
+    pub fn positives(&self) -> Vec<&Arena> {
+        let mut positives: Vec<&Arena> = self
             .arenas
             .iter()
             .filter(|arena| arena.is_positive())
-            .cloned()
             .collect();
         positives.sort_by(|a, b| a.odds.total_cmp(&b.odds));
         positives
     }
 
     /// Returns an arena by index. 0-4 inclusive.
-    pub fn get_arena(&self, id: usize) -> Option<Arena> {
+    pub fn get_arena(&self, id: usize) -> Option<&Arena> {
         // if id is invalid, return None
-        self.arenas.get(id).cloned()
+        self.arenas.get(id)
     }
 }
