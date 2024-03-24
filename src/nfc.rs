@@ -343,7 +343,7 @@ impl NeoFoodClub {
     /// We use this to determine if we need to recalculate everything
     /// between
     pub fn modified(&self) -> bool {
-        self.round_data.customOdds != Some(self.round_data.currentOdds)
+        self.custom_odds() != *self.current_odds()
     }
 
     /// Returns whether or not the round is outdated.
@@ -906,7 +906,9 @@ impl NeoFoodClub {
     /// If `model` is None, the model is going to use the default.
     /// If `modifier` is None, the modifier is going to be empty.
     pub fn copy(&self, model: Option<ProbabilityModel>, modifier: Option<Modifier>) -> NeoFoodClub {
-        NeoFoodClub::new(self.round_data.clone(), self.bet_amount, model, modifier)
+        let mut round_data = self.round_data.clone();
+        round_data.customOdds = None;
+        NeoFoodClub::new(round_data, self.bet_amount, model, modifier)
     }
 }
 

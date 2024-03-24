@@ -1081,6 +1081,8 @@ mod tests {
 
         assert!(modified_nfc.modified());
 
+        assert_ne!(modified_nfc.custom_odds(), *modified_nfc.current_odds());
+
         assert_eq!(modified_nfc.modifier.custom_odds, Some(custom_odds));
     }
 
