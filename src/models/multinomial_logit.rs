@@ -19,8 +19,7 @@ pub fn make_probabilities(arenas: &Arenas) -> [[f64; 5]; 5] {
         let mut capabilities = [0.0; 5];
         for pirate in &arena.pirates {
             let pirate_index = pirate.index - 1;
-            let mut pirate_strength =
-                *unsafe { LOGIT_INTERCEPTS.get_unchecked(pirate.id as usize - 1) };
+            let mut pirate_strength = LOGIT_INTERCEPTS[pirate.id as usize - 1];
             let favorite = pirate.pfa.unwrap_or(0);
             let allergy = pirate.nfa.unwrap_or(0);
             pirate_strength += LOGIT_PFA[pirate.id as usize - 1] * favorite as f64;
