@@ -108,13 +108,6 @@ impl Modifier {
 }
 
 impl Modifier {
-    /// If the modifier has custom odds or opening odds, this returns true.
-    /// Basically, this is a marker to know whether or not this
-    /// modifier edits food club data, meaning we will not store it anywhere.
-    pub fn modified(&self) -> bool {
-        self.custom_odds.is_some() || self.is_opening_odds() || self.custom_time.is_some()
-    }
-
     /// Applies the modifier to the round data and returns a new round data object.
     pub fn apply(&self, round_data: &mut RoundData) {
         // first, apply opening odds to current odds if necessary
