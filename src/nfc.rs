@@ -91,10 +91,12 @@ impl NeoFoodClub {
         self.bet_amount = amount.map(|x| x.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX));
     }
 
+    /// Lazy loads the Arenas object.
     pub fn get_arenas(&self) -> &Arenas {
         self.arenas.get_or_init(|| Arenas::new(&self.round_data))
     }
 
+    /// Lazy loads the probabilities.
     pub fn probabilities(&self) -> [[f64; 5]; 5] {
         *self.stds.get_or_init(|| match self.probability_model {
             ProbabilityModel::OriginalModel => OriginalModel::new(&self.round_data),
@@ -104,9 +106,37 @@ impl NeoFoodClub {
         })
     }
 
+    /// Lazy loads the RoundDictData object.
     pub fn round_dict_data(&self) -> &RoundDictData {
         self.data
             .get_or_init(|| make_round_dicts(self.probabilities(), self.custom_odds()))
+    }
+
+    /// Clear our lazy-loaded caches.
+    pub fn clear_caches(&mut self) {
+        self.arenas = OnceCell::new();
+        self.stds = OnceCell::new();
+        self.data = OnceCell::new();
+        self.round_data.customOdds = None;
+    }
+
+    /// changes the modifier of this NeoFoodClub object
+    /// if the modifier is different enough, we clear the caches
+    pub fn with_modifier(&mut self, modifier: Modifier) -> &NeoFoodClub {
+        let current_modifier = &self.modifier;
+
+        if self.modified()
+            && (current_modifier.custom_odds != modifier.custom_odds
+                || current_modifier.custom_time != modifier.custom_time)
+        {
+            self.clear_caches();
+        }
+
+        self.round_data.customOdds = None;
+
+        self.modifier = modifier;
+        self.modifier.apply(&mut self.round_data);
+        self
     }
 
     /// Creates a NeoFoodClub object from a JSON string.
