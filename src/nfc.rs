@@ -105,14 +105,8 @@ impl NeoFoodClub {
     }
 
     pub fn round_dict_data(&self) -> &RoundDictData {
-        self.data.get_or_init(|| {
-            make_round_dicts(
-                self.probabilities(),
-                self.round_data
-                    .customOdds
-                    .unwrap_or(self.round_data.currentOdds),
-            )
-        })
+        self.data
+            .get_or_init(|| make_round_dicts(self.probabilities(), self.custom_odds()))
     }
 
     /// Creates a NeoFoodClub object from a JSON string.
