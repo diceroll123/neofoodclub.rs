@@ -403,7 +403,7 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
                 if *index == 0 {
                     continue;
                 }
-                total_bin += 1 << (19 - (index - 1 + arena * 4));
+                total_bin |= pirate_binary(*index as u8, arena as u8);
                 total_probs *= stds[arena][*index];
                 total_odds *= odds[arena][*index] as u32;
             }
