@@ -69,13 +69,10 @@ impl NeoFoodClub {
 
         let use_modifier = modifier.unwrap_or_default();
 
-        if use_modifier.modified() {
-            // if the modifier has custom odds or opening odds or custom time, we apply it to the round data
-            round_data = use_modifier.apply(&round_data);
-        }
+        use_modifier.apply(&mut round_data);
 
         let mut nfc = NeoFoodClub {
-            round_data: round_data.clone(),
+            round_data,
             bet_amount: None,
             modifier: use_modifier,
             probability_model: model.unwrap_or_default(),
@@ -108,8 +105,14 @@ impl NeoFoodClub {
     }
 
     pub fn round_dict_data(&self) -> &RoundDictData {
-        self.data
-            .get_or_init(|| make_round_dicts(self.probabilities(), self.round_data.currentOdds))
+        self.data.get_or_init(|| {
+            make_round_dicts(
+                self.probabilities(),
+                self.round_data
+                    .customOdds
+                    .unwrap_or(self.round_data.currentOdds),
+            )
+        })
     }
 
     /// Creates a NeoFoodClub object from a JSON string.
@@ -164,6 +167,7 @@ impl NeoFoodClub {
                 .expect("Invalid openingOdds JSON."),
             currentOdds: serde_json::from_str(&temp.currentOdds)
                 .expect("Invalid currentOdds JSON."),
+            customOdds: None,
             winners: temp
                 .winners
                 .map(|x| serde_json::from_str(&x).expect("Invalid winners JSON.")),
@@ -246,6 +250,14 @@ impl NeoFoodClub {
         self.round_data.currentOdds
     }
 
+    /// Returns the custom odds.
+    /// If the custom odds are not available, returns the current odds.
+    /// Custom odds is just the resolved changes of a Modifier.
+    /// Effectively, this is what we use for calculations.
+    pub fn custom_odds(&self) -> [[u8; 5]; 5] {
+        self.round_data.customOdds.unwrap_or(self.current_odds())
+    }
+
     /// Returns the opening odds.
     pub fn opening_odds(&self) -> [[u8; 5]; 5] {
         self.round_data.openingOdds
@@ -305,7 +317,7 @@ impl NeoFoodClub {
 
     /// Returns whether or not the modifier has made changes to the round data.
     pub fn modified(&self) -> bool {
-        self.modifier.modified()
+        self.round_data.customOdds != Some(self.round_data.currentOdds)
     }
 
     /// Returns whether or not the round is outdated.

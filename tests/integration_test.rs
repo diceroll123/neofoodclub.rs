@@ -898,7 +898,7 @@ mod tests {
         let nfc = make_test_nfc_with_modifier(modifier);
 
         assert_eq!(
-            nfc.current_odds(),
+            nfc.custom_odds(),
             [
                 [1, 13, 13, 13, 13],
                 [1, 13, 13, 13, 13],
@@ -1297,7 +1297,7 @@ mod tests {
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
-        assert_eq!(nfc.current_odds(), nfc.opening_odds());
+        assert_eq!(nfc.custom_odds(), nfc.opening_odds());
     }
 
     #[test]
