@@ -59,7 +59,7 @@ impl BetAmounts {
 /// A container for a set of bets
 #[derive(Debug, Clone)]
 pub struct Bets {
-    pub array_indices: Vec<u16>,
+    pub array_indices: Vec<usize>,
     pub bet_binaries: Vec<u32>,
     pub bet_amounts: Option<Vec<Option<u32>>>,
     pub odds: Odds,
@@ -67,12 +67,12 @@ pub struct Bets {
 
 impl Bets {
     /// Creates a new Bets struct from a list of indices mapped to the RoundDictData of the NFC object
-    pub fn new(nfc: &NeoFoodClub, indices: Vec<u16>, amounts: Option<BetAmounts>) -> Self {
+    pub fn new(nfc: &NeoFoodClub, indices: Vec<usize>, amounts: Option<BetAmounts>) -> Self {
         let mut bets = Self {
             array_indices: indices.clone(),
             bet_binaries: indices
                 .iter()
-                .map(|i| nfc.round_dict_data().bins[*i as usize])
+                .map(|i| nfc.round_dict_data().bins[*i])
                 .collect(),
             bet_amounts: None,
             odds: Odds::new(nfc, indices),
@@ -117,7 +117,7 @@ impl Bets {
             .iter()
             .zip(amounts.iter())
             .map(|(i, a)| {
-                let er = nfc.round_dict_data().ers[*i as usize];
+                let er = nfc.round_dict_data().ers[*i];
                 let amount = a.unwrap_or(0) as f64;
                 amount.mul_add(er, -amount)
             })
@@ -133,7 +133,7 @@ impl Bets {
     pub fn expected_return_list(&self, nfc: &NeoFoodClub) -> Vec<f64> {
         self.array_indices
             .iter()
-            .map(|i| nfc.round_dict_data().ers[*i as usize])
+            .map(|i| nfc.round_dict_data().ers[*i])
             .collect()
     }
 
@@ -169,21 +169,21 @@ impl Bets {
     /// Creates a new Bets struct from a list of binaries
     pub fn from_binaries(nfc: &NeoFoodClub, binaries: Vec<u32>) -> Self {
         // maintaining the order of the binaries is important, at the cost of some performance
-        let bin_index_map: std::collections::HashMap<u32, u16> = nfc
+        let bin_index_map: std::collections::HashMap<u32, usize> = nfc
             .round_dict_data()
             .bins
             .iter()
             .enumerate()
-            .map(|(i, &bin)| (bin, i as u16))
+            .map(|(i, &bin)| (bin, i))
             .collect();
 
-        let bin_indices: Vec<u16> = binaries
+        let bin_indices: Vec<usize> = binaries
             .iter()
             .filter_map(|b| bin_index_map.get(b))
             .cloned()
             .collect();
 
-        let unique_bin_indices: Vec<u16> = bin_indices.into_iter().unique().collect();
+        let unique_bin_indices: Vec<usize> = bin_indices.into_iter().unique().collect();
 
         Self::new(nfc, unique_bin_indices, None)
     }
@@ -326,7 +326,7 @@ impl Bets {
     pub fn odds_values(&self, nfc: &NeoFoodClub) -> Vec<u32> {
         self.array_indices
             .iter()
-            .map(|i| nfc.round_dict_data().odds[*i as usize])
+            .map(|i| nfc.round_dict_data().odds[*i])
             .collect()
     }
 

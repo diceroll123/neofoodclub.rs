@@ -23,16 +23,14 @@ pub struct Odds {
 }
 
 impl Odds {
-    pub fn new(nfc: &NeoFoodClub, array_indices: Vec<u16>) -> Self {
+    pub fn new(nfc: &NeoFoodClub, array_indices: Vec<usize>) -> Self {
         let amount_of_bets = array_indices.len();
         let mut pirate_indices = Vec::<[u8; 5]>::with_capacity(amount_of_bets);
         let mut odds_values = Vec::<u32>::with_capacity(amount_of_bets);
 
         for index in array_indices.iter() {
-            pirate_indices.push(binary_to_indices(
-                nfc.round_dict_data().bins[*index as usize],
-            ));
-            odds_values.push(nfc.round_dict_data().odds[*index as usize]);
+            pirate_indices.push(binary_to_indices(nfc.round_dict_data().bins[*index]));
+            odds_values.push(nfc.round_dict_data().odds[*index]);
         }
 
         let chances = build_chance_objects(&pirate_indices, &odds_values, nfc.probabilities());
