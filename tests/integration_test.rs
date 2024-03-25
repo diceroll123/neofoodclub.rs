@@ -1503,4 +1503,26 @@ mod tests {
         assert_ne!(mer.get_binaries(), gmer.get_binaries());
         assert_eq!(mer.get_binaries(), reset_mer.get_binaries());
     }
+
+    #[test]
+    fn test_mer_and_omer_not_equal() {
+        let mut nfc = make_test_nfc();
+
+        let mer = nfc.make_max_ter_bets();
+
+        let opening_odds_nfc = nfc.with_modifier(Modifier::new(
+            ModifierFlags::OPENING_ODDS.bits(),
+            None,
+            None,
+        ));
+
+        let omer = opening_odds_nfc.make_max_ter_bets();
+
+        let reset_mer = nfc
+            .with_modifier(Modifier::new(ModifierFlags::EMPTY.bits(), None, None))
+            .make_max_ter_bets();
+
+        assert_ne!(mer.get_binaries(), omer.get_binaries());
+        assert_eq!(mer.get_binaries(), reset_mer.get_binaries());
+    }
 }

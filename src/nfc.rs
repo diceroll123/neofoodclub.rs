@@ -138,8 +138,9 @@ impl NeoFoodClub {
         let current_modifier = &self.modifier;
 
         if self.modified()
-            && (current_modifier.custom_odds != modifier.custom_odds
-                || current_modifier.custom_time != modifier.custom_time)
+            || (current_modifier.custom_odds != modifier.custom_odds
+                || current_modifier.custom_time != modifier.custom_time
+                || current_modifier.is_opening_odds() != modifier.is_opening_odds())
         {
             self.clear_caches();
         }
