@@ -389,11 +389,11 @@ pub struct RoundDictData {
 }
 
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
-    let mut bins: Vec<u32> = Vec::with_capacity(3125);
-    let mut probs: Vec<f64> = Vec::with_capacity(3125);
-    let mut odds_res: Vec<u32> = Vec::with_capacity(3125);
-    let mut ers: Vec<f64> = Vec::with_capacity(3125);
-    let mut maxbets: Vec<u32> = Vec::with_capacity(3125);
+    let mut bins: Vec<u32> = Vec::with_capacity(3124);
+    let mut probs: Vec<f64> = Vec::with_capacity(3124);
+    let mut odds_res: Vec<u32> = Vec::with_capacity(3124);
+    let mut ers: Vec<f64> = Vec::with_capacity(3124);
+    let mut maxbets: Vec<u32> = Vec::with_capacity(3124);
 
     // Use a single loop to iterate over all possible combinations
     for a in 0..5 {
