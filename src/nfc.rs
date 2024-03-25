@@ -399,48 +399,37 @@ impl NeoFoodClub {
     /// `amount` is the number of indices to return. (normally, this would be 10)
     fn max_ter_indices(&self) -> Vec<usize> {
         let reverse = self.modifier.is_reverse();
-        let mut binding = self
-            .max_ter_indices
-            .get_or_init(|| {
-                let mut binding: Vec<usize> = Vec::with_capacity(3124);
 
-                let general = self.modifier.is_general();
+        let general = self.modifier.is_general();
 
-                if !general {
-                    if let Some(bet_amount) = self.bet_amount {
-                        // if there's a bet amount, we use Net Expected instead of Expected Return
-                        let maxbets: &Vec<u32> = self.clamped_max_bets.get_or_init(|| {
-                            self.round_dict_data()
-                                .maxbets
-                                .iter()
-                                .map(|&x| x.min(bet_amount))
-                                .collect()
-                        });
+        let use_ers = if !general && self.bet_amount.is_some() {
+            let bet_amount = self.bet_amount.unwrap();
 
-                        let new_ers: &Vec<f64> = self.net_expected_indices.get_or_init(|| {
-                            maxbets
-                                .iter()
-                                .zip(self.round_dict_data().ers.iter())
-                                .map(|(maxbet, er)| {
-                                    let mb = *maxbet as f64;
-                                    mb * er - mb
-                                })
-                                .collect()
-                        });
+            // if there's a bet amount, we use Net Expected instead of Expected Return
+            let maxbets: &Vec<u32> = self.clamped_max_bets.get_or_init(|| {
+                self.round_dict_data()
+                    .maxbets
+                    .iter()
+                    .map(|&x| x.min(bet_amount))
+                    .collect()
+            });
 
-                        binding = argsort_by(new_ers, &|a: &f64, b: &f64| a.total_cmp(b));
-                    }
-                }
+            let new_ers: &Vec<f64> = self.net_expected_indices.get_or_init(|| {
+                maxbets
+                    .iter()
+                    .zip(self.round_dict_data().ers.iter())
+                    .map(|(maxbet, er)| {
+                        let mb = *maxbet as f64;
+                        mb * er - mb
+                    })
+                    .collect()
+            });
+            new_ers
+        } else {
+            &self.round_dict_data().ers
+        };
 
-                if binding.is_empty() {
-                    binding = argsort_by(&self.round_dict_data().ers, &|a: &f64, b: &f64| {
-                        a.total_cmp(b)
-                    });
-                }
-
-                binding
-            })
-            .to_vec();
+        let mut binding = argsort_by(use_ers, &|a: &f64, b: &f64| a.total_cmp(b));
 
         // since it's reversed to begin with, we reverse it if
         // the modifier does not have the reverse flag
