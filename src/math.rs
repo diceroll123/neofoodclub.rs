@@ -1,5 +1,6 @@
 use core::panic;
 use itertools::iproduct;
+use rayon::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 
 use crate::chance::Chance;
@@ -388,27 +389,30 @@ pub struct RoundDictData {
     pub ers: Vec<f64>,
     pub maxbets: Vec<u32>,
 }
-
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
-    // the first iteration is an empty bet, so we skip it with skip(1)
-    let nums: Vec<(u32, f64, u32, f64, u32)> = iproduct!(0..5, 0..5, 0..5, 0..5, 0..5)
+    // Parallel computation with preserved order
+    let nums: Vec<(usize, u32, f64, u32, f64, u32)> = iproduct!(0..5, 0..5, 0..5, 0..5, 0..5)
         .skip(1)
+        // .par_bridge()
         .map(|(a, b, c, d, e)| {
+            let loop_index = e + d * 5 + c * 25 + b * 125 + a * 625;
             let mut total_bin: u32 = 0;
             let mut total_probs: f64 = 1.0;
             let mut total_odds: u32 = 1;
 
             let nums = [a, b, c, d, e];
-            for (arena, index) in nums.iter().enumerate() {
-                if *index == 0 {
+            for (arena, &index) in nums.iter().enumerate() {
+                if index == 0 {
                     continue;
                 }
-                total_bin |= pirate_binary(*index as u8, arena as u8);
-                total_probs *= stds[arena][*index];
-                total_odds *= odds[arena][*index] as u32;
+                // Assuming pirate_binary is a pure function without side effects
+                total_bin |= pirate_binary(index as u8, arena as u8);
+                total_probs *= stds[arena][index];
+                total_odds *= odds[arena][index] as u32;
             }
 
             (
+                loop_index - 1,
                 total_bin,
                 total_probs,
                 total_odds,
@@ -418,19 +422,25 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
         })
         .collect();
 
-    let mut bins: Vec<u32> = Vec::with_capacity(3124);
-    let mut probs: Vec<f64> = Vec::with_capacity(3124);
-    let mut odds: Vec<u32> = Vec::with_capacity(3124);
-    let mut ers: Vec<f64> = Vec::with_capacity(3124);
-    let mut maxbets: Vec<u32> = Vec::with_capacity(3124);
-
-    for (bin, std, odd, er, maxbet) in nums.iter() {
-        bins.push(*bin);
-        probs.push(*std);
-        odds.push(*odd);
-        ers.push(*er);
-        maxbets.push(*maxbet);
-    }
+    let (bins, probs, odds, ers, maxbets): (Vec<u32>, Vec<f64>, Vec<u32>, Vec<f64>, Vec<u32>) =
+        nums.iter().fold(
+            (
+                vec![0; 3124],
+                vec![0.0; 3124],
+                vec![0; 3124],
+                vec![0.0; 3124],
+                vec![0; 3124],
+            ),
+            |(mut bins, mut probs, mut odds, mut ers, mut maxbets),
+             &(index, bin, prob, odd, er, maxbet)| {
+                bins[index] = bin;
+                probs[index] = prob;
+                odds[index] = odd;
+                ers[index] = er;
+                maxbets[index] = maxbet;
+                (bins, probs, odds, ers, maxbets)
+            },
+        );
 
     RoundDictData {
         bins,
