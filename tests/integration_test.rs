@@ -1487,4 +1487,20 @@ mod tests {
             another_another_modifier.custom_time
         );
     }
+
+    #[test]
+    fn test_mer_and_gmer_not_equal() {
+        let mut nfc = make_test_nfc();
+
+        let mer = nfc.make_max_ter_bets();
+        let gmer = nfc
+            .with_modifier(Modifier::new(ModifierFlags::GENERAL.bits(), None, None))
+            .make_max_ter_bets();
+        let reset_mer = nfc
+            .with_modifier(Modifier::new(ModifierFlags::EMPTY.bits(), None, None))
+            .make_max_ter_bets();
+
+        assert_ne!(mer.get_binaries(), gmer.get_binaries());
+        assert_eq!(mer.get_binaries(), reset_mer.get_binaries());
+    }
 }
