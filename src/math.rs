@@ -401,7 +401,6 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
             for c in 0..5 {
                 for d in 0..5 {
                     for e in 0..5 {
-                        // Skip the initial all-zero combination if needed
                         if a == 0 && b == 0 && c == 0 && d == 0 && e == 0 {
                             continue;
                         }
@@ -415,7 +414,6 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
                             if index == 0 {
                                 continue;
                             }
-                            // Assuming pirate_binary is a pure function without side effects
                             total_bin |= pirate_binary(index as u8, arena as u8);
                             total_probs *= stds[arena][index];
                             total_odds *= odds[arena][index] as u32;
@@ -424,7 +422,6 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
                         let er = total_probs * total_odds as f64;
                         let maxbet = ((1_000_000.0 / total_odds as f64).ceil() as u32).max(50); // maxbet is 50 minimum;
 
-                        // Directly push to vectors
                         bins.push(total_bin);
                         probs.push(total_probs);
                         odds_res.push(total_odds);
