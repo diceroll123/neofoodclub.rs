@@ -1,3 +1,8 @@
+#![feature(test)]
+
+extern crate test;
+use test::Bencher;
+
 use neofoodclub::math::{self, BET_AMOUNT_MAX, BET_AMOUNT_MIN};
 use neofoodclub::modifier::{Modifier, ModifierFlags};
 use neofoodclub::nfc::{NeoFoodClub, ProbabilityModel};
@@ -51,7 +56,7 @@ mod tests {
     use std::collections::HashMap;
 
     use chrono::{DateTime, NaiveTime, TimeDelta};
-    use neofoodclub::{bets::BetAmounts, pirates::PartialPirateThings};
+    use neofoodclub::{bets::BetAmounts, math::make_round_dicts, pirates::PartialPirateThings};
     use rayon::prelude::*;
 
     use super::*;
@@ -1524,5 +1529,54 @@ mod tests {
 
         assert_ne!(mer.get_binaries(), omer.get_binaries());
         assert_eq!(mer.get_binaries(), reset_mer.get_binaries());
+    }
+
+    #[bench]
+    fn bench_new_json(b: &mut Bencher) {
+        b.iter(|| NeoFoodClub::from_json(ROUND_DATA_JSON, None, None, None));
+    }
+
+    #[bench]
+    fn bench_new_url(b: &mut Bencher) {
+        b.iter(|| NeoFoodClub::from_url(ROUND_DATA_URL, None, None, None));
+    }
+
+    #[bench]
+    fn bench_make_round_dicts(b: &mut Bencher) {
+        let probs = [
+            [
+                1.0,
+                0.08712121212121213,
+                0.29166666666666663,
+                0.39621212121212124,
+                0.225,
+            ],
+            [1.0, 0.05, 0.7166666666666666, 0.18333333333333335, 0.05],
+            [
+                1.0,
+                0.05,
+                0.3833333333333334,
+                0.18333333333333335,
+                0.3833333333333334,
+            ],
+            [
+                1.0,
+                0.5152777777777778,
+                0.11805555555555555,
+                0.18333333333333335,
+                0.18333333333333335,
+            ],
+            [1.0, 0.05, 0.29166666666666663, 0.43333333333333324, 0.225],
+        ];
+
+        let odds = [
+            [1, 11, 3, 2, 3],
+            [1, 13, 2, 7, 13],
+            [1, 13, 2, 4, 2],
+            [1, 2, 10, 6, 6],
+            [1, 13, 4, 2, 4],
+        ];
+
+        b.iter(|| make_round_dicts(probs, odds));
     }
 }
