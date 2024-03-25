@@ -1,6 +1,4 @@
 use core::panic;
-use itertools::iproduct;
-use rayon::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 
 use crate::chance::Chance;
@@ -389,63 +387,59 @@ pub struct RoundDictData {
     pub ers: Vec<f64>,
     pub maxbets: Vec<u32>,
 }
+
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
-    // Parallel computation with preserved order
-    let nums: Vec<(usize, u32, f64, u32, f64, u32)> = iproduct!(0..5, 0..5, 0..5, 0..5, 0..5)
-        .skip(1)
-        // .par_bridge()
-        .map(|(a, b, c, d, e)| {
-            let loop_index = e + d * 5 + c * 25 + b * 125 + a * 625;
-            let mut total_bin: u32 = 0;
-            let mut total_probs: f64 = 1.0;
-            let mut total_odds: u32 = 1;
+    let mut bins: Vec<u32> = Vec::with_capacity(3125);
+    let mut probs: Vec<f64> = Vec::with_capacity(3125);
+    let mut odds_res: Vec<u32> = Vec::with_capacity(3125);
+    let mut ers: Vec<f64> = Vec::with_capacity(3125);
+    let mut maxbets: Vec<u32> = Vec::with_capacity(3125);
 
-            let nums = [a, b, c, d, e];
-            for (arena, &index) in nums.iter().enumerate() {
-                if index == 0 {
-                    continue;
+    // Use a single loop to iterate over all possible combinations
+    for a in 0..5 {
+        for b in 0..5 {
+            for c in 0..5 {
+                for d in 0..5 {
+                    for e in 0..5 {
+                        // Skip the initial all-zero combination if needed
+                        if a == 0 && b == 0 && c == 0 && d == 0 && e == 0 {
+                            continue;
+                        }
+
+                        let nums = [a, b, c, d, e];
+                        let mut total_bin: u32 = 0;
+                        let mut total_probs: f64 = 1.0;
+                        let mut total_odds: u32 = 1;
+
+                        for (arena, &index) in nums.iter().enumerate() {
+                            if index == 0 {
+                                continue;
+                            }
+                            // Assuming pirate_binary is a pure function without side effects
+                            total_bin |= pirate_binary(index as u8, arena as u8);
+                            total_probs *= stds[arena][index];
+                            total_odds *= odds[arena][index] as u32;
+                        }
+
+                        let er = total_probs * total_odds as f64;
+                        let maxbet = ((1_000_000.0 / total_odds as f64).ceil() as u32).max(50); // maxbet is 50 minimum;
+
+                        // Directly push to vectors
+                        bins.push(total_bin);
+                        probs.push(total_probs);
+                        odds_res.push(total_odds);
+                        ers.push(er);
+                        maxbets.push(maxbet);
+                    }
                 }
-                // Assuming pirate_binary is a pure function without side effects
-                total_bin |= pirate_binary(index as u8, arena as u8);
-                total_probs *= stds[arena][index];
-                total_odds *= odds[arena][index] as u32;
             }
-
-            (
-                loop_index - 1,
-                total_bin,
-                total_probs,
-                total_odds,
-                total_probs * total_odds as f64,
-                ((1_000_000.0 / total_odds as f64).ceil() as u32).max(50), // maxbet is 50 minimum
-            )
-        })
-        .collect();
-
-    let (bins, probs, odds, ers, maxbets): (Vec<u32>, Vec<f64>, Vec<u32>, Vec<f64>, Vec<u32>) =
-        nums.iter().fold(
-            (
-                vec![0; 3124],
-                vec![0.0; 3124],
-                vec![0; 3124],
-                vec![0.0; 3124],
-                vec![0; 3124],
-            ),
-            |(mut bins, mut probs, mut odds, mut ers, mut maxbets),
-             &(index, bin, prob, odd, er, maxbet)| {
-                bins[index] = bin;
-                probs[index] = prob;
-                odds[index] = odd;
-                ers[index] = er;
-                maxbets[index] = maxbet;
-                (bins, probs, odds, ers, maxbets)
-            },
-        );
+        }
+    }
 
     RoundDictData {
         bins,
         probs,
-        odds,
+        odds: odds_res,
         ers,
         maxbets,
     }
