@@ -362,6 +362,9 @@ impl Bets {
             table.add_row(row);
         }
 
+        let column = table.column_mut(0).expect("Column 0 should exist");
+        column.set_cell_alignment(comfy_table::CellAlignment::Right);
+
         table.to_string()
     }
 
@@ -369,7 +372,15 @@ impl Bets {
     pub fn stats_table(&self, nfc: &NeoFoodClub) -> String {
         let mut table = Table::new();
 
-        let mut headers = vec!["#", "Odds", "ER", "MaxBet", "Hex"];
+        let mut headers = vec!["#", "Odds", "ER"];
+
+        let nes = self.net_expected_list(nfc);
+
+        if !nes.is_empty() {
+            headers.push("NE");
+        }
+
+        headers.extend(vec!["MaxBet", "Hex"]);
 
         headers.extend(ARENA_NAMES);
 
@@ -392,11 +403,20 @@ impl Bets {
                 .position(|&r| r == *bet_binary)
                 .unwrap();
 
+            let hex = format!("0x{:0>5}", format!("{:X}", bet_binary));
+
             row.extend(vec![
                 nfc.round_dict_data().odds[bin_index].to_string(),
                 format!("{:.3}:1", nfc.round_dict_data().ers[bin_index]),
+            ]);
+
+            if !nes.is_empty() {
+                row.push(format!("{:.2}", nes[bet_index]));
+            }
+
+            row.extend(vec![
                 nfc.round_dict_data().maxbets[bin_index].to_string(),
-                format!("0x{:X}", bet_binary),
+                hex,
             ]);
 
             for (arena_index, pirate_index) in bet_indices.iter().enumerate() {
@@ -409,6 +429,13 @@ impl Bets {
                 }
             }
             table.add_row(row);
+        }
+
+        let column = table.column_mut(0).expect("Column 0 should exist");
+        column.set_cell_alignment(comfy_table::CellAlignment::Right);
+
+        for column in table.column_iter_mut().skip(1) {
+            column.set_cell_alignment(comfy_table::CellAlignment::Center);
         }
 
         table.to_string()

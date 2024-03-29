@@ -21,3 +21,7 @@ rayon = "1.10.0"
 
 [lib]
 name = "neofoodclub"
+
+[[example]]
+name = "all_bets_table"
+path = "examples/all_bets_table.rs"
