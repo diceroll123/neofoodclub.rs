@@ -475,14 +475,15 @@ impl NeoFoodClub {
     fn get_highest_er_full_bet(&self) -> u32 {
         let max_ter_indices = self.max_ter_indices();
 
-        for index in max_ter_indices.iter() {
-            let bin = self.round_dict_data().bins[*index];
-            if bin.count_ones() == 5 {
-                return bin;
-            }
-        }
+        let index = max_ter_indices
+            .iter()
+            .find(|&index| {
+                let bin = self.round_dict_data().bins[*index];
+                bin.count_ones() == 5
+            })
+            .unwrap();
 
-        unreachable!("No full-arena bets found, somehow");
+        return self.round_dict_data().bins[*index];
     }
 }
 
