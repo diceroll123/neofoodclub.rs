@@ -406,18 +406,21 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
                         }
 
                         let nums = [a, b, c, d, e];
-                        let mut total_bin: u32 = 0;
-                        let mut total_probs: f64 = 1.0;
-                        let mut total_odds: u32 = 1;
+                        let total_bin: u32 = pirates_binary(nums);
 
-                        for (arena, &index) in nums.iter().enumerate() {
-                            if index == 0 {
-                                continue;
-                            }
-                            total_bin |= pirate_binary(index as u8, arena as u8);
-                            total_probs *= stds[arena][index];
-                            total_odds *= odds[arena][index] as u32;
-                        }
+                        let (total_probs, total_odds) = nums.iter().enumerate().fold(
+                            (1.0, 1),
+                            |(probs, odds_fold), (arena, &index)| {
+                                if index == 0 {
+                                    (probs, odds_fold)
+                                } else {
+                                    (
+                                        probs * stds[arena][index as usize],
+                                        odds_fold * odds[arena][index as usize] as u32,
+                                    )
+                                }
+                            },
+                        );
 
                         let er = total_probs * total_odds as f64;
                         let maxbet = ((1_000_000.0 / total_odds as f64).ceil() as u32).max(50); // maxbet is 50 minimum;
