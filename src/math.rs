@@ -340,17 +340,19 @@ fn ib_doable(binary: u32) -> bool {
 #[inline]
 fn ib_prob(binary: u32, probabilities: [[f64; 5]; 5]) -> f64 {
     // computes the probability that the winning combination is accepted by ib
-    let mut total_prob: f64 = 1.0;
-    for (x, bit_mask) in BIT_MASKS.iter().enumerate() {
-        let mut ar_prob: f64 = 0.0;
-        for (y, pir_ib) in PIR_IB.iter().enumerate() {
-            if binary & bit_mask & pir_ib > 0 {
-                ar_prob += probabilities[x][y + 1];
-            }
-        }
-        total_prob *= ar_prob;
-    }
-    total_prob
+    BIT_MASKS
+        .iter()
+        .enumerate()
+        .fold(1.0, |total_prob, (x, bit_mask)| {
+            PIR_IB.iter().enumerate().fold(0.0, |ar_prob, (y, pir_ib)| {
+                ar_prob
+                    + if binary & bit_mask & pir_ib > 0 {
+                        probabilities[x][y + 1]
+                    } else {
+                        0.0
+                    }
+            }) * total_prob
+        })
 }
 
 pub fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32> {
