@@ -824,15 +824,18 @@ impl NeoFoodClub {
             return 0;
         }
 
-        let mut units = 0;
-        for i in bets.array_indices.iter() {
-            let bet_bin = self.round_dict_data().bins[*i];
-            if bet_bin & winners_binary == bet_bin {
-                units += self.round_dict_data().odds[*i];
-            }
-        }
+        bets.array_indices
+            .iter()
+            .map(|i| {
+                let bet_bin = self.round_dict_data().bins[*i];
 
-        units
+                if bet_bin & winners_binary == bet_bin {
+                    self.round_dict_data().odds[*i]
+                } else {
+                    0
+                }
+            })
+            .sum()
     }
 
     /// Returns the amount of neopoints you'd win if you placed the given bets.
@@ -849,18 +852,19 @@ impl NeoFoodClub {
             return 0;
         }
 
-        let mut np = 0;
-
-        for (bet_index, array_index) in bets.array_indices.iter().enumerate() {
-            let bet_bin = self.round_dict_data().bins[*array_index];
-            if bet_bin & winners_binary == bet_bin {
-                np += (self.round_dict_data().odds[*array_index]
-                    * bet_amounts[bet_index].unwrap_or(0))
-                .clamp(0, 1_000_000);
-            }
-        }
-
-        np
+        bets.array_indices
+            .iter()
+            .enumerate()
+            .fold(0, |acc, (bet_index, array_index)| {
+                let bet_bin = self.round_dict_data().bins[*array_index];
+                if bet_bin & winners_binary == bet_bin {
+                    acc + (self.round_dict_data().odds[*array_index]
+                        * bet_amounts[bet_index].unwrap_or(0))
+                    .clamp(0, 1_000_000)
+                } else {
+                    acc
+                }
+            })
     }
 }
 
