@@ -391,7 +391,7 @@ pub struct RoundDictData {
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
     let mut bins: Vec<u32> = Vec::with_capacity(3124);
     let mut probs: Vec<f64> = Vec::with_capacity(3124);
-    let mut odds_res: Vec<u32> = Vec::with_capacity(3124);
+    let mut odds_vec: Vec<u32> = Vec::with_capacity(3124);
     let mut ers: Vec<f64> = Vec::with_capacity(3124);
     let mut maxbets: Vec<u32> = Vec::with_capacity(3124);
 
@@ -427,7 +427,7 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
 
                         bins.push(total_bin);
                         probs.push(total_probs);
-                        odds_res.push(total_odds);
+                        odds_vec.push(total_odds);
                         ers.push(er);
                         maxbets.push(maxbet);
                     }
@@ -439,7 +439,7 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
     RoundDictData {
         bins,
         probs,
-        odds: odds_res,
+        odds: odds_vec,
         ers,
         maxbets,
     }
