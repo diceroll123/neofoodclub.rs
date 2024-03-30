@@ -397,7 +397,6 @@ impl NeoFoodClub {
     }
 
     /// Returns max-TER indices.
-    /// `amount` is the number of indices to return. (normally, this would be 10)
     fn max_ter_indices(&self) -> Vec<usize> {
         let reverse = self.modifier.is_reverse();
 

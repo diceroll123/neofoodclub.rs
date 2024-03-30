@@ -414,7 +414,6 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
     let mut ers: Vec<f64> = Vec::with_capacity(3124);
     let mut maxbets: Vec<u32> = Vec::with_capacity(3124);
 
-    // Use a single loop to iterate over all possible combinations
     for a in 0..5 {
         for b in 0..5 {
             for c in 0..5 {
