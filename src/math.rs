@@ -413,7 +413,7 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
                 total_probs,
                 total_odds,
                 total_probs * total_odds as f64,
-                (1_000_000.0 / total_odds as f64).ceil() as u32,
+                ((1_000_000.0 / total_odds as f64).ceil() as u32).max(50), // maxbet is 50 minimum
             )
         })
         .collect();
