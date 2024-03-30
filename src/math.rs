@@ -1,6 +1,8 @@
 use core::panic;
 use std::collections::{BTreeMap, HashMap};
 
+use rand::Rng;
+
 use crate::chance::Chance;
 
 pub const BET_AMOUNT_MIN: u32 = 50;
@@ -68,6 +70,23 @@ pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
         .fold(0, |total, (arena, index)| {
             total | pirate_binary(*index, arena as u8)
         })
+}
+
+/// ```
+/// let bin = neofoodclub::math::random_full_pirates_binary();
+/// assert_eq!(bin.count_ones(), 5);
+/// ```
+#[inline]
+pub fn random_full_pirates_binary() -> u32 {
+    let mut rng = rand::thread_rng();
+
+    pirates_binary([
+        rng.gen_range(1..=4),
+        rng.gen_range(1..=4),
+        rng.gen_range(1..=4),
+        rng.gen_range(1..=4),
+        rng.gen_range(1..=4),
+    ])
 }
 
 /// ```

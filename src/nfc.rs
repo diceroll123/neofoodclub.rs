@@ -4,7 +4,8 @@ use std::collections::HashSet;
 use crate::arena::Arenas;
 use crate::bets::Bets;
 use crate::math::{
-    make_round_dicts, pirates_binary, RoundDictData, BET_AMOUNT_MAX, BET_AMOUNT_MIN, BIT_MASKS,
+    make_round_dicts, pirates_binary, random_full_pirates_binary, RoundDictData, BET_AMOUNT_MAX,
+    BET_AMOUNT_MIN, BIT_MASKS,
 };
 use crate::modifier::{Modifier, ModifierFlags};
 use crate::oddschange::OddsChange;
@@ -15,7 +16,6 @@ use chrono_tz::Tz;
 use itertools::Itertools;
 use querystring::stringify;
 use rand::seq::SliceRandom;
-use rand::Rng;
 use serde::Deserialize;
 
 use crate::models::multinomial_logit::MultinomialLogitModel;
@@ -613,35 +613,17 @@ impl NeoFoodClub {
 
     /// Picks a random full-arena bet and makes a gambit out of it
     pub fn make_random_gambit_bets(&self) -> Bets {
-        let mut rng = rand::thread_rng();
-
-        let random_full_binary = pirates_binary([
-            rng.gen_range(1..=4),
-            rng.gen_range(1..=4),
-            rng.gen_range(1..=4),
-            rng.gen_range(1..=4),
-            rng.gen_range(1..=4),
-        ]);
-
-        self.make_gambit_bets(random_full_binary)
+        self.make_gambit_bets(random_full_pirates_binary())
     }
 
     /// Creates a Bets object that consits of "crazy" bets.
     /// Crazy bets consist of randomly-selected, full-arena bets.
     /// Following these bets is not recommended.
     pub fn make_crazy_bets(&self) -> Bets {
-        let mut rng = rand::thread_rng();
         let mut binaries: HashSet<u32> = HashSet::with_capacity(self.max_amount_of_bets());
 
         while binaries.len() < binaries.capacity() {
-            let random_full_binary = pirates_binary([
-                rng.gen_range(1..=4),
-                rng.gen_range(1..=4),
-                rng.gen_range(1..=4),
-                rng.gen_range(1..=4),
-                rng.gen_range(1..=4),
-            ]);
-            binaries.insert(random_full_binary);
+            binaries.insert(random_full_pirates_binary());
         }
 
         let mut bets = Bets::from_binaries(self, binaries.into_iter().collect::<Vec<u32>>());
