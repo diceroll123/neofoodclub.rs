@@ -396,13 +396,11 @@ impl NeoFoodClub {
         }
     }
 
-    /// Returns max-TER indices.
-    fn max_ter_indices(&self) -> Vec<usize> {
-        let reverse = self.modifier.is_reverse();
-
+    /// Returns the maximum TER values we'll use.
+    pub fn max_ters(&self) -> &Vec<f64> {
         let general = self.modifier.is_general();
 
-        let use_ers = if !general && self.bet_amount.is_some() {
+        if !general && self.bet_amount.is_some() {
             let bet_amount = self.bet_amount.unwrap();
 
             // if there's a bet amount, we use Net Expected instead of Expected Return
@@ -427,10 +425,16 @@ impl NeoFoodClub {
             new_ers
         } else {
             &self.round_dict_data().ers
-        };
+        }
+    }
+
+    /// Returns max-TER indices.
+    fn max_ter_indices(&self) -> Vec<usize> {
+        let use_ers = self.max_ters();
 
         let mut binding = argsort_by(use_ers, &|a: &f64, b: &f64| a.total_cmp(b));
 
+        let reverse = self.modifier.is_reverse();
         // since it's reversed to begin with, we reverse it if
         // the modifier does not have the reverse flag
         if !reverse {
