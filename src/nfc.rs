@@ -573,8 +573,10 @@ impl NeoFoodClub {
         let mut indices = Vec::<usize>::with_capacity(self.max_amount_of_bets());
 
         // get indices of all bets that contain the pirates in the pirates_binary
+        let bins = &self.round_dict_data().bins;
+
         for index in all_indices.iter() {
-            let bin = self.round_dict_data().bins[*index];
+            let bin = bins[*index];
             if bin & pirates_binary == bin {
                 indices.push(*index);
             }

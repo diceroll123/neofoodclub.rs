@@ -1,5 +1,4 @@
 use core::panic;
-use itertools::iproduct;
 use std::collections::{BTreeMap, HashMap};
 
 use crate::chance::Chance;
@@ -390,52 +389,57 @@ pub struct RoundDictData {
 }
 
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
-    // the first iteration is an empty bet, so we skip it with skip(1)
-    let nums: Vec<(u32, f64, u32, f64, u32)> = iproduct!(0..5, 0..5, 0..5, 0..5, 0..5)
-        .skip(1)
-        .map(|(a, b, c, d, e)| {
-            let mut total_bin: u32 = 0;
-            let mut total_probs: f64 = 1.0;
-            let mut total_odds: u32 = 1;
-
-            let nums = [a, b, c, d, e];
-            for (arena, index) in nums.iter().enumerate() {
-                if *index == 0 {
-                    continue;
-                }
-                total_bin |= pirate_binary(*index as u8, arena as u8);
-                total_probs *= stds[arena][*index];
-                total_odds *= odds[arena][*index] as u32;
-            }
-
-            (
-                total_bin,
-                total_probs,
-                total_odds,
-                total_probs * total_odds as f64,
-                ((1_000_000.0 / total_odds as f64).ceil() as u32).max(50), // maxbet is 50 minimum
-            )
-        })
-        .collect();
-
     let mut bins: Vec<u32> = Vec::with_capacity(3124);
     let mut probs: Vec<f64> = Vec::with_capacity(3124);
-    let mut odds: Vec<u32> = Vec::with_capacity(3124);
+    let mut odds_vec: Vec<u32> = Vec::with_capacity(3124);
     let mut ers: Vec<f64> = Vec::with_capacity(3124);
     let mut maxbets: Vec<u32> = Vec::with_capacity(3124);
 
-    for (bin, std, odd, er, maxbet) in nums.iter() {
-        bins.push(*bin);
-        probs.push(*std);
-        odds.push(*odd);
-        ers.push(*er);
-        maxbets.push(*maxbet);
+    // Use a single loop to iterate over all possible combinations
+    for a in 0..5 {
+        for b in 0..5 {
+            for c in 0..5 {
+                for d in 0..5 {
+                    for e in 0..5 {
+                        if a == 0 && b == 0 && c == 0 && d == 0 && e == 0 {
+                            continue;
+                        }
+
+                        let nums = [a, b, c, d, e];
+                        let total_bin: u32 = pirates_binary(nums);
+
+                        let (total_probs, total_odds) = nums.iter().enumerate().fold(
+                            (1.0, 1),
+                            |(probs, odds_fold), (arena, &index)| {
+                                if index == 0 {
+                                    (probs, odds_fold)
+                                } else {
+                                    (
+                                        probs * stds[arena][index as usize],
+                                        odds_fold * odds[arena][index as usize] as u32,
+                                    )
+                                }
+                            },
+                        );
+
+                        let er = total_probs * total_odds as f64;
+                        let maxbet = ((1_000_000.0 / total_odds as f64).ceil() as u32).max(50); // maxbet is 50 minimum;
+
+                        bins.push(total_bin);
+                        probs.push(total_probs);
+                        odds_vec.push(total_odds);
+                        ers.push(er);
+                        maxbets.push(maxbet);
+                    }
+                }
+            }
+        }
     }
 
     RoundDictData {
         bins,
         probs,
-        odds,
+        odds: odds_vec,
         ers,
         maxbets,
     }
