@@ -411,7 +411,7 @@ impl NeoFoodClub {
                 self.round_dict_data()
                     .maxbets
                     .iter()
-                    .map(|&x| x.min(bet_amount))
+                    .map(|&x| x.max(50).min(bet_amount))
                     .collect()
             });
 
