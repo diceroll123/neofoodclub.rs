@@ -1240,6 +1240,15 @@ mod tests {
     }
 
     #[test]
+    fn test_imake_bets_from_array_indices() {
+        let nfc = NeoFoodClub::from_json(ROUND_DATA_JSON, None, None, None);
+
+        let bets = nfc.make_bets_from_array_indices(vec![1, 2, 3, 4, 5, 6]);
+
+        assert_eq!(bets.len(), 6);
+    }
+
+    #[test]
     #[should_panic]
     fn test_set_bet_amounts_panic() {
         let nfc = make_test_nfc();

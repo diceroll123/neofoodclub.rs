@@ -795,6 +795,22 @@ impl NeoFoodClub {
 
         bets
     }
+
+    /// Creates a Bets object from a vector of indices.
+    /// Unlike the other usages of indices, this one uses the index of our RoundData struct.
+    /// For when we do the sorting in Python.
+    pub fn make_bets_from_array_indices(&self, array_indices: Vec<usize>) -> Bets {
+        let binaries = array_indices
+            .iter()
+            .map(|&i| self.round_dict_data().bins[i])
+            .collect();
+
+        let mut bets = Bets::from_binaries(self, binaries);
+
+        bets.fill_bet_amounts(self);
+
+        bets
+    }
 }
 
 impl NeoFoodClub {
