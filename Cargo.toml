@@ -14,7 +14,7 @@ regex = "1.10.6"
 querystring = "1.1.0"
 chrono = "0.4.38"
 chrono-tz = "0.10.0"
-comfy-table = "7.1.0"
+comfy-table = "7.1.1"
 
 [dev-dependencies]
 rayon = "1.10.0"
