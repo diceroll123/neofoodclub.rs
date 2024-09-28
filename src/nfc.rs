@@ -486,7 +486,7 @@ impl NeoFoodClub {
             })
             .unwrap();
 
-        return self.round_dict_data().bins[*index];
+        self.round_dict_data().bins[*index]
     }
 }
 
