@@ -29,6 +29,7 @@ bitflags! {
 }
 
 /// A struct to represent a modifier.
+///
 /// A modifier is a set of flags that affect the way certain bets are calculated,
 /// as well as custom odds and custom time.
 /// Custom odds is a map of pirate IDs to odds.
