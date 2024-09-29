@@ -19,16 +19,17 @@ pub fn make_probabilities(arenas: &Arenas) -> [[f64; 5]; 5] {
         let mut capabilities = [0.0; 5];
         for pirate in &arena.pirates {
             let pirate_index = pirate.index - 1;
-            let mut pirate_strength = LOGIT_INTERCEPTS[pirate.id as usize - 1];
+            let pirate_id = pirate.id as usize - 1;
+            let mut pirate_strength = LOGIT_INTERCEPTS[pirate_id];
             let favorite = pirate.pfa.unwrap_or(0);
             let allergy = pirate.nfa.unwrap_or(0);
-            pirate_strength += LOGIT_PFA[pirate.id as usize - 1] * favorite as f64;
-            pirate_strength += LOGIT_NFA[pirate.id as usize - 1] * allergy as f64;
+            pirate_strength += LOGIT_PFA[pirate_id] * favorite as f64;
+            pirate_strength += LOGIT_NFA[pirate_id] * allergy as f64;
 
             match pirate_index {
-                1 => pirate_strength += LOGIT_IS_POS2[pirate.id as usize - 1],
-                2 => pirate_strength += LOGIT_IS_POS3[pirate.id as usize - 1],
-                3 => pirate_strength += LOGIT_IS_POS4[pirate.id as usize - 1],
+                1 => pirate_strength += LOGIT_IS_POS2[pirate_id],
+                2 => pirate_strength += LOGIT_IS_POS3[pirate_id],
+                3 => pirate_strength += LOGIT_IS_POS4[pirate_id],
                 _ => (),
             }
 

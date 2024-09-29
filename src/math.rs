@@ -28,32 +28,8 @@ const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
 /// ```
 #[inline]
 pub fn pirate_binary(index: u8, arena: u8) -> u32 {
-    // the actual algorithm is:
-    // 1 << (19 - (index - 1 + arena * 4))
-    // but we don't need to calculate it when they're constants
-    // so we just match!
-
-    match (index, arena) {
-        (1, 0) => 0x80000,
-        (1, 1) => 0x8000,
-        (1, 2) => 0x800,
-        (1, 3) => 0x80,
-        (1, 4) => 0x8,
-        (2, 0) => 0x40000,
-        (2, 1) => 0x4000,
-        (2, 2) => 0x400,
-        (2, 3) => 0x40,
-        (2, 4) => 0x4,
-        (3, 0) => 0x20000,
-        (3, 1) => 0x2000,
-        (3, 2) => 0x200,
-        (3, 3) => 0x20,
-        (3, 4) => 0x2,
-        (4, 0) => 0x10000,
-        (4, 1) => 0x1000,
-        (4, 2) => 0x100,
-        (4, 3) => 0x10,
-        (4, 4) => 0x1,
+    match index {
+        1..=4 => 0x80000 >> ((index - 1) + arena * 4),
         _ => 0,
     }
 }

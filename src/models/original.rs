@@ -26,21 +26,20 @@ pub fn make_probabilities(odds: [[u8; 5]; 5]) -> [[f64; 5]; 5] {
         let mut max_prob: f64 = 0.0;
 
         for pirate in 1..5 {
-            let pirate_odd = odds[arena][pirate];
-            if pirate_odd == 13 {
-                min[arena][pirate] = 0.0;
-                max[arena][pirate] = 1.0 / 13.0;
-            } else if pirate_odd == 2 {
-                min[arena][pirate] = 1.0 / 3.0;
-                max[arena][pirate] = 1.0;
-            } else {
-                let p_o: f64 = pirate_odd as f64;
-                min[arena][pirate] = 1.0 / (1.0 + p_o);
-                max[arena][pirate] = 1.0 / p_o;
-            }
+            let (min_val, max_val) = match odds[arena][pirate] {
+                13 => (0.0, 1.0 / 13.0),
+                2 => (1.0 / 3.0, 1.0),
+                pirate_odd => {
+                    let p_o = pirate_odd as f64;
+                    (1.0 / (1.0 + p_o), 1.0 / p_o)
+                }
+            };
 
-            min_prob += min[arena][pirate];
-            max_prob += max[arena][pirate];
+            min[arena][pirate] = min_val;
+            max[arena][pirate] = max_val;
+
+            min_prob += min_val;
+            max_prob += max_val;
         }
 
         for pirate in 1..5 {
@@ -79,8 +78,7 @@ pub fn make_probabilities(odds: [[u8; 5]; 5]) -> [[f64; 5]; 5] {
                 || rectify_count == 0.0
                 || max_rectify_value * rectify_count < rectify_value + 1.0 - std_total)
             {
-                rectify_value += 1.0 - std_total;
-                rectify_value /= rectify_count;
+                rectify_value = (rectify_value + 1.0 - std_total) / rectify_count;
                 for pirate in 1..5 {
                     if odds[arena][pirate] <= rectify_level {
                         std[arena][pirate] = min[arena][pirate] + rectify_value;
