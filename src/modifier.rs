@@ -73,38 +73,30 @@ impl Modifier {
 
     /// Returns true if the modifier has no flags.
     pub fn is_empty(&self) -> bool {
-        ModifierFlags::from_bits(self.value).unwrap().is_empty()
+        self.value == 0
     }
 
     /// Returns true if the modifier has the general flag.
     /// This makes max TER use ER instead of NE.
     pub fn is_general(&self) -> bool {
-        ModifierFlags::from_bits(self.value)
-            .unwrap()
-            .contains(ModifierFlags::GENERAL)
+        self.value & ModifierFlags::GENERAL.bits() != 0
     }
 
     /// Returns true if the modifier has the opening odds flag.
     pub fn is_opening_odds(&self) -> bool {
-        ModifierFlags::from_bits(self.value)
-            .unwrap()
-            .contains(ModifierFlags::OPENING_ODDS)
+        self.value & ModifierFlags::OPENING_ODDS.bits() != 0
     }
 
     /// Returns true if the modifier has the reverse flag.
     /// This makes bets use reverse ER odds for calculations.
     pub fn is_reverse(&self) -> bool {
-        ModifierFlags::from_bits(self.value)
-            .unwrap()
-            .contains(ModifierFlags::REVERSE)
+        self.value & ModifierFlags::REVERSE.bits() != 0
     }
 
     /// Returns true if the modifier has the charity corner flag.
     /// This makes bets use 15 bets instead of 10.
     pub fn is_charity_corner(&self) -> bool {
-        ModifierFlags::from_bits(self.value)
-            .unwrap()
-            .contains(ModifierFlags::CHARITY_CORNER)
+        self.value & ModifierFlags::CHARITY_CORNER.bits() != 0
     }
 }
 

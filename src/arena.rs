@@ -36,8 +36,7 @@ impl Arena {
         let winner = round_data.winners.unwrap_or([0; 5])[id as usize];
 
         let mut pirates: Vec<Pirate> = Vec::with_capacity(5);
-        for (index, pirate_id) in round_data.pirates[id as usize].iter().enumerate() {
-            let p_id = pirate_id.to_owned();
+        for (index, &pirate_id) in round_data.pirates[id as usize].iter().enumerate() {
             let current_odds = use_odds[id as usize][index + 1];
 
             let mut pfa: Option<u8> = None;
@@ -47,11 +46,11 @@ impl Arena {
                 for food in &foods[id as usize] {
                     pfa = Some(
                         pfa.unwrap_or(0)
-                            .add(POSITIVE_FOOD[p_id as usize - 1][*food as usize - 1]),
+                            .add(POSITIVE_FOOD[pirate_id as usize - 1][*food as usize - 1]),
                     );
                     nfa = Some(
                         nfa.unwrap_or(0_i8)
-                            .sub(NEGATIVE_FOOD[p_id as usize - 1][*food as usize - 1] as i8),
+                            .sub(NEGATIVE_FOOD[pirate_id as usize - 1][*food as usize - 1] as i8),
                     );
                 }
                 fa = Some(pfa.unwrap_or(0) as i8 + nfa.unwrap_or(0));
@@ -60,7 +59,7 @@ impl Arena {
             let is_winner = winner as usize == (index + 1);
 
             pirates.push(Pirate {
-                id: p_id,
+                id: pirate_id,
                 arena_id: id,
                 index: (index + 1) as u8,
                 current_odds,
