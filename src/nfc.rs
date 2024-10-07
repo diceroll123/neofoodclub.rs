@@ -766,7 +766,11 @@ impl NeoFoodClub {
             }
         }
 
-        Ok(Bets::from_binaries(self, bins))
+        let mut bets = Bets::from_binaries(self, bins);
+
+        bets.fill_bet_amounts(self);
+
+        Ok(bets)
     }
 
     /// Creates a Bets object translated from a bets hash.
