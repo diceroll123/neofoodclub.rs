@@ -6,67 +6,62 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Odds {
-    /// The Chance object with the highest odds value.
-    pub best: Chance,
-
-    /// The Chance object for busting. Can be None if this bet set is bustproof.
-    pub bust: Option<Chance>,
-
-    /// The Chance object with the highest probability.
-    pub most_likely_winner: Chance,
-
-    /// The sum of probabilities where you'd make a partial return.
-    pub partial_rate: f64,
-
     /// A vector of Chance objects, sorted by probability from least to greatest.
-    pub chances: Vec<Chance>,
+    chances: Vec<Chance>,
+
+    /// Amount of bets in the set.
+    amount_of_bets: u32,
 }
 
 impl Odds {
-    pub fn new(nfc: &NeoFoodClub, array_indices: Vec<usize>) -> Self {
-        let amount_of_bets = array_indices.len();
-        let mut pirate_indices = Vec::<[u8; 5]>::with_capacity(amount_of_bets);
-        let mut odds_values = Vec::<u32>::with_capacity(amount_of_bets);
-
-        for index in array_indices.iter() {
-            pirate_indices.push(binary_to_indices(nfc.round_dict_data().bins[*index]));
-            odds_values.push(nfc.round_dict_data().odds[*index]);
-        }
+    pub fn new(nfc: &NeoFoodClub, array_indices: &[usize]) -> Self {
+        let (pirate_indices, odds_values): (Vec<[u8; 5]>, Vec<u32>) = array_indices
+            .iter()
+            .map(|&index| {
+                (
+                    binary_to_indices(nfc.round_dict_data().bins[index]),
+                    nfc.round_dict_data().odds[index],
+                )
+            })
+            .unzip();
 
         let chances = build_chance_objects(&pirate_indices, &odds_values, nfc.probabilities());
 
-        let best = chances
-            .last()
-            .expect("Chances vector should not be empty")
-            .clone();
+        Self {
+            chances,
+            amount_of_bets: array_indices.len() as u32,
+        }
+    }
 
-        let bust = chances.first().and_then(|bust_chance| {
-            if bust_chance.value == 0 {
-                Some(bust_chance.clone())
-            } else {
-                None
-            }
-        });
-
-        let most_likely_winner = chances
+    /// The Chance object with the highest probability.
+    pub fn most_likely_winner(&self) -> &Chance {
+        self.chances
             .iter()
             .filter(|o| o.value > 0)
             .max_by(|a, b| a.probability.total_cmp(&b.probability))
             .expect("Chances vector should not be empty")
-            .clone();
+    }
 
-        let partial_rate = chances
+    /// The Chance object with the highest odds value.
+    pub fn best(&self) -> &Chance {
+        self.chances
+            .last()
+            .expect("Chances vector should not be empty")
+    }
+
+    /// The Chance object for busting. Can be None if this bet set is bustproof.
+    pub fn bust(&self) -> Option<&Chance> {
+        self.chances
+            .first()
+            .filter(|bust_chance| bust_chance.value == 0)
+    }
+
+    /// The sum of probabilities where you'd make a partial return.
+    pub fn partial_rate(&self) -> f64 {
+        self.chances
             .iter()
-            .filter(|o| 0 < o.value && o.value < amount_of_bets as u32)
+            .filter(|o| 0 < o.value && o.value < self.amount_of_bets)
             .map(|o| o.probability)
-            .sum();
-
-        Self {
-            best,
-            bust,
-            most_likely_winner,
-            partial_rate,
-            chances,
-        }
+            .sum()
     }
 }

@@ -15,7 +15,7 @@ use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use itertools::Itertools;
 use querystring::stringify;
-use rand::seq::SliceRandom;
+use rand::seq::IteratorRandom;
 use serde::Deserialize;
 
 use crate::models::multinomial_logit::MultinomialLogitModel;
@@ -450,13 +450,13 @@ impl NeoFoodClub {
     fn get_sorted_odds_indices(&self, descending: bool, amount: usize) -> Vec<usize> {
         let odds = &self.round_dict_data().odds;
 
-        let mut binding = argsort_by(odds, &|a: &u32, b: &u32| a.cmp(b));
+        let mut indices = argsort_by(odds, &|a: &u32, b: &u32| a.cmp(b));
 
         if descending {
-            binding.reverse();
+            indices.reverse();
         }
 
-        binding.iter().take(amount).cloned().collect()
+        indices.into_iter().take(amount).collect()
     }
 
     /// Returns sorted indices of probabilities
@@ -465,13 +465,13 @@ impl NeoFoodClub {
     fn get_sorted_probs_indices(&self, descending: bool, amount: usize) -> Vec<usize> {
         let probs = &self.round_dict_data().probs;
 
-        let mut binding = argsort_by(probs, &|a: &f64, b: &f64| a.partial_cmp(b).unwrap());
+        let mut indices = argsort_by(probs, &|a: &f64, b: &f64| a.partial_cmp(b).unwrap());
 
         if descending {
-            binding.reverse();
+            indices.reverse();
         }
 
-        binding.iter().take(amount).copied().collect()
+        indices.into_iter().take(amount).collect()
     }
 
     /// Return the binary representation of the highest expected return full-arena bet.
@@ -479,14 +479,11 @@ impl NeoFoodClub {
         let max_ter_indices = self.max_ter_indices();
 
         let index = max_ter_indices
-            .iter()
-            .find(|&index| {
-                let bin = self.round_dict_data().bins[*index];
-                bin.count_ones() == 5
-            })
+            .into_iter()
+            .find(|&index| self.round_dict_data().bins[index].count_ones() == 5)
             .unwrap();
 
-        self.round_dict_data().bins[*index]
+        self.round_dict_data().bins[index]
     }
 }
 
@@ -540,12 +537,9 @@ impl NeoFoodClub {
     /// Following these bets is not recommended.
     pub fn make_random_bets(&self) -> Bets {
         let mut rng = rand::thread_rng();
-        let values: Vec<usize> = (0..3124).collect();
 
-        let chosen_values: Vec<usize> = values
-            .choose_multiple(&mut rng, self.max_amount_of_bets())
-            .copied()
-            .collect();
+        let chosen_values: Vec<usize> =
+            (0..3124).choose_multiple(&mut rng, self.max_amount_of_bets());
 
         let mut bets = Bets::new(self, chosen_values, None);
         bets.fill_bet_amounts(self);
@@ -568,27 +562,20 @@ impl NeoFoodClub {
 
     /// Creates a Bets object that consists of a gambit of the given 5-bet pirates binary.
     pub fn make_gambit_bets(&self, pirates_binary: u32) -> Bets {
-        if pirates_binary.count_ones() != 5 {
-            panic!("Pirates binary must have 5 pirates.");
-        }
-
-        let all_indices = self.get_sorted_odds_indices(true, 3124);
-
-        let mut indices = Vec::<usize>::with_capacity(self.max_amount_of_bets());
+        assert_eq!(
+            pirates_binary.count_ones(),
+            5,
+            "Pirates binary must have 5 pirates."
+        );
 
         // get indices of all bets that contain the pirates in the pirates_binary
         let bins = &self.round_dict_data().bins;
-
-        for index in all_indices.iter() {
-            let bin = bins[*index];
-            if bin & pirates_binary == bin {
-                indices.push(*index);
-            }
-
-            if indices.len() == indices.capacity() {
-                break;
-            }
-        }
+        let indices = self
+            .get_sorted_odds_indices(true, 3124)
+            .into_iter()
+            .filter(|&index| bins[index] & pirates_binary == bins[index])
+            .take(self.max_amount_of_bets())
+            .collect();
 
         let mut bets = Bets::new(self, indices, None);
         bets.fill_bet_amounts(self);
@@ -629,7 +616,7 @@ impl NeoFoodClub {
             binaries.insert(random_full_pirates_binary());
         }
 
-        let mut bets = Bets::from_binaries(self, binaries.into_iter().collect::<Vec<u32>>());
+        let mut bets = Bets::from_binaries(self, binaries.into_iter().collect());
         bets.fill_bet_amounts(self);
         bets
     }
@@ -733,38 +720,29 @@ impl NeoFoodClub {
     /// Returns an error if the amount of pirates is greater than 3.
     /// Returns an error if the amount of pirates is less than 1.
     pub fn make_tenbet_bets(&self, pirates_binary: u32) -> Result<Bets, String> {
-        let mut amount_of_pirates = 0;
-        for mask in BIT_MASKS.iter() {
-            let arena_pirates = (pirates_binary & mask).count_ones();
-
-            if arena_pirates > 1 {
-                return Err("You can only pick 1 pirate per arena.".to_string());
-            }
-
-            amount_of_pirates += arena_pirates;
-        }
-
-        if amount_of_pirates == 0 {
-            return Err("You must pick at least 1 pirate, and at most 3.".to_string());
-        }
-
-        if amount_of_pirates > 3 {
-            return Err("You must pick 3 pirates at most.".to_string());
-        }
-
-        let max_ter_indices = self.max_ter_indices();
-
-        let mut bins = Vec::with_capacity(self.max_amount_of_bets());
-
-        for index in max_ter_indices.iter() {
-            let bin = self.round_dict_data().bins[*index];
-            if bin & pirates_binary == pirates_binary {
-                bins.push(bin);
-                if bins.len() == bins.capacity() {
-                    break;
+        let amount_of_pirates = BIT_MASKS
+            .iter()
+            .map(|mask| (pirates_binary & mask).count_ones())
+            .inspect(|&arena_pirates| {
+                if arena_pirates > 1 {
+                    panic!("You can only pick 1 pirate per arena.");
                 }
-            }
+            })
+            .sum::<u32>();
+
+        match amount_of_pirates {
+            0 => return Err("You must pick at least 1 pirate, and at most 3.".to_string()),
+            1..=3 => (),
+            _ => return Err("You must pick 3 pirates at most.".to_string()),
         }
+
+        let bins = self
+            .max_ter_indices()
+            .iter()
+            .map(|&index| self.round_dict_data().bins[index])
+            .filter(|&bin| bin & pirates_binary == pirates_binary)
+            .take(self.max_amount_of_bets())
+            .collect();
 
         let mut bets = Bets::from_binaries(self, bins);
 

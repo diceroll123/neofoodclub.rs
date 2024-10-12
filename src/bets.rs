@@ -68,14 +68,18 @@ pub struct Bets {
 impl Bets {
     /// Creates a new Bets struct from a list of indices mapped to the RoundDictData of the NFC object
     pub fn new(nfc: &NeoFoodClub, indices: Vec<usize>, amounts: Option<BetAmounts>) -> Self {
+        let bet_binaries = indices
+            .iter()
+            .map(|&i| nfc.round_dict_data().bins[i])
+            .collect();
+
+        let odds = Odds::new(nfc, &indices);
+
         let mut bets = Self {
-            array_indices: indices.clone(),
-            bet_binaries: indices
-                .iter()
-                .map(|&i| nfc.round_dict_data().bins[i])
-                .collect(),
+            array_indices: indices,
+            bet_binaries,
             bet_amounts: None,
-            odds: Odds::new(nfc, indices),
+            odds,
         };
 
         bets.set_bet_amounts(&amounts);
@@ -231,7 +235,7 @@ impl Bets {
     /// Returns whether or not this set is capable of busting
     /// if there are no odds, returns None
     pub fn is_bustproof(&self) -> bool {
-        self.odds.bust.is_none()
+        self.odds.bust().is_none()
     }
 
     /// Returns whether or not this set is "crazy"
@@ -247,20 +251,15 @@ impl Bets {
             return false;
         }
 
-        let anded = self
-            .bet_binaries
-            .iter()
-            .fold(None, |acc, &b| {
-                if let Some(result) = acc {
-                    Some(result & b)
-                } else {
-                    Some(b)
-                }
-            })
-            .unwrap()
-            .count_ones();
+        self.count_tenbets() > 0
+    }
 
-        anded > 0
+    /// Returns the number of tenbets in this set
+    pub fn count_tenbets(&self) -> u32 {
+        self.bet_binaries
+            .iter()
+            .fold(u32::MAX, |acc, &b| acc & b)
+            .count_ones()
     }
 
     /// Returns whether or not this set is a "gambit" set.

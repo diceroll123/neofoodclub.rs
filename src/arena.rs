@@ -97,8 +97,8 @@ impl Arena {
     }
 
     /// Returns a vector of pirates in this arena sorted from least to greatest odds.
-    pub fn best(&self) -> Vec<Pirate> {
-        let mut pirates = self.pirates.clone();
+    pub fn best(&self) -> Vec<&Pirate> {
+        let mut pirates: Vec<&Pirate> = self.pirates.iter().collect();
         pirates.sort_by_key(|pirate| pirate.current_odds);
         pirates
     }
@@ -159,8 +159,8 @@ impl Arenas {
         let indices = binary_to_indices(binary);
         self.arenas
             .iter()
-            .filter_map(|arena| {
-                let pirate_index = indices[arena.id as usize];
+            .zip(indices.iter())
+            .filter_map(|(arena, &pirate_index)| {
                 if pirate_index == 0 {
                     None
                 } else {
@@ -171,16 +171,16 @@ impl Arenas {
     }
 
     /// Returns a vector of all pirates in their arenas.
-    pub fn get_all_pirates(&self) -> Vec<Vec<Pirate>> {
+    pub fn get_all_pirates(&self) -> Vec<Vec<&Pirate>> {
         self.arenas
             .iter()
-            .map(|arena| arena.pirates.clone())
+            .map(|arena| arena.pirates.iter().collect())
             .collect()
     }
 
     /// Returns the arenas sorted by best odds.
-    pub fn best(&self) -> Vec<Arena> {
-        let mut best: Vec<Arena> = self.arenas.clone();
+    pub fn best(&self) -> Vec<&Arena> {
+        let mut best: Vec<&Arena> = self.arenas.iter().collect();
         best.sort_by(|a, b| a.odds.total_cmp(&b.odds));
         best
     }
