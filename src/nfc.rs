@@ -693,6 +693,7 @@ impl NeoFoodClub {
 
                 Some(Bets::from_binaries(self, binaries))
             }
+            #[cfg(not(coverage))]
             _ => unreachable!("This should never happen."),
         };
 
@@ -725,6 +726,7 @@ impl NeoFoodClub {
             .map(|mask| (pirates_binary & mask).count_ones())
             .inspect(|&arena_pirates| {
                 if arena_pirates > 1 {
+                    #[cfg(not(coverage))]
                     panic!("You can only pick 1 pirate per arena.");
                 }
             })
@@ -925,10 +927,12 @@ impl NeoFoodClub {
 
 fn validate_round_data(round_data: &RoundData) {
     if round_data.round == 0 {
+        #[cfg(not(coverage))]
         panic!("Round number must be greater than 0.");
     }
 
     if round_data.pirates.len() != 5 {
+        #[cfg(not(coverage))]
         panic!("Pirates must have 5 arenas.");
     }
 
@@ -936,13 +940,16 @@ fn validate_round_data(round_data: &RoundData) {
 
     for arena in round_data.pirates.iter() {
         if arena.len() != 4 {
+            #[cfg(not(coverage))]
             panic!("Each arena must have 4 pirates.");
         }
         for pirate in arena.iter() {
             if pirate_ids.contains(pirate) {
+                #[cfg(not(coverage))]
                 panic!("Pirates must be unique.");
             }
             if !(&1..=&20).contains(&pirate) {
+                #[cfg(not(coverage))]
                 panic!("Pirate IDs must be between 1 and 20.");
             }
             pirate_ids.push(*pirate);
@@ -950,44 +957,53 @@ fn validate_round_data(round_data: &RoundData) {
     }
 
     if pirate_ids.len() != 20 {
+        #[cfg(not(coverage))]
         panic!("Pirates must have 20 unique IDs.");
     }
 
     if round_data.currentOdds.len() != 5 {
+        #[cfg(not(coverage))]
         panic!("Current odds must have 5 arenas.");
     }
 
     for arena in round_data.currentOdds.iter() {
         if arena.len() != 5 {
+            #[cfg(not(coverage))]
             panic!("Each arena in currentOdds must have 5 integers, first one being 1.");
         }
 
         for (index, odds) in arena.iter().enumerate() {
             if index == 0 {
                 if *odds != 1 {
+                    #[cfg(not(coverage))]
                     panic!("First integer in each arena in currentOdds must be 1.");
                 }
             } else if *odds < 2 || *odds > 13 {
+                #[cfg(not(coverage))]
                 panic!("Odds must be between 2 and 13.");
             }
         }
     }
 
     if round_data.openingOdds.len() != 5 {
+        #[cfg(not(coverage))]
         panic!("Opening odds must have 5 arenas.");
     }
 
     for arena in round_data.openingOdds.iter() {
         if arena.len() != 5 {
+            #[cfg(not(coverage))]
             panic!("Each arena in openingOdds must have 5 integers, first one being 1.");
         }
 
         for (index, odds) in arena.iter().enumerate() {
             if index == 0 {
                 if *odds != 1 {
+                    #[cfg(not(coverage))]
                     panic!("First integer in each arena in openingOdds must be 1.");
                 }
             } else if *odds < 2 || *odds > 13 {
+                #[cfg(not(coverage))]
                 panic!("Odds must be between 2 and 13.");
             }
         }
@@ -996,16 +1012,19 @@ fn validate_round_data(round_data: &RoundData) {
     if round_data.foods.is_some() {
         let foods = round_data.foods.as_ref().unwrap();
         if foods.len() != 5 {
+            #[cfg(not(coverage))]
             panic!("Foods must have 5 arenas.");
         }
 
         for arena in foods.iter() {
             if arena.len() != 10 {
+                #[cfg(not(coverage))]
                 panic!("Each arena in foods must have 10 integers.");
             }
 
             for food in arena.iter() {
                 if *food < 1 || *food > 40 {
+                    #[cfg(not(coverage))]
                     panic!("Food integers must be between 1 and 40.");
                 }
             }
@@ -1015,6 +1034,7 @@ fn validate_round_data(round_data: &RoundData) {
     if round_data.winners.is_some() {
         let winners = round_data.winners.as_ref().unwrap();
         if winners.len() != 5 {
+            #[cfg(not(coverage))]
             panic!("Winners must have 5 integers.");
         }
 
@@ -1023,6 +1043,7 @@ fn validate_round_data(round_data: &RoundData) {
         let all_one_to_four = winners.iter().all(|&x| (1..=4).contains(&x));
 
         if !(all_zero ^ all_one_to_four) {
+            #[cfg(not(coverage))]
             panic!("Winners must either be all 0, or all 1-4.");
         }
     }
