@@ -693,8 +693,10 @@ impl NeoFoodClub {
 
                 Some(Bets::from_binaries(self, binaries))
             }
-            #[cfg(not(coverage))]
-            _ => unreachable!("This should never happen."),
+            _ => {
+                #[cfg(not(coverage))]
+                unreachable!("This should never happen.")
+            }
         };
 
         // give it bet amounts
