@@ -627,7 +627,6 @@ impl NeoFoodClub {
         let positives = self.get_arenas().positives();
 
         let bets = match positives.len() {
-            0 => None,
             1 => {
                 // If only one arena is positive, we place 1 bet on each of the pirates of that arena. Total bets = 4.
                 let best_arena = &positives[0];
@@ -693,10 +692,7 @@ impl NeoFoodClub {
 
                 Some(Bets::from_binaries(self, binaries))
             }
-            _ => {
-                #[cfg(not(coverage))]
-                unreachable!("This should never happen.")
-            }
+            _ => None,
         };
 
         // give it bet amounts
