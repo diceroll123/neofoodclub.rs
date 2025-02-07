@@ -536,7 +536,7 @@ impl NeoFoodClub {
     /// Creates a Bets object that consists of random bets.
     /// Following these bets is not recommended.
     pub fn make_random_bets(&self) -> Bets {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let chosen_values: Vec<usize> =
             (0..3124).choose_multiple(&mut rng, self.max_amount_of_bets());

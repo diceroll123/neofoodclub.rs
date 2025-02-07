@@ -58,14 +58,14 @@ pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
 /// ```
 #[inline]
 pub fn random_full_pirates_binary() -> u32 {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     pirates_binary([
-        rng.gen_range(1..=4),
-        rng.gen_range(1..=4),
-        rng.gen_range(1..=4),
-        rng.gen_range(1..=4),
-        rng.gen_range(1..=4),
+        rng.random_range(1..=4),
+        rng.random_range(1..=4),
+        rng.random_range(1..=4),
+        rng.random_range(1..=4),
+        rng.random_range(1..=4),
     ])
 }
 
