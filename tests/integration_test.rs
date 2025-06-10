@@ -1364,7 +1364,7 @@ mod tests {
     #[should_panic]
     fn test_from_url_panic() {
         let _nfc = NeoFoodClub::from_url(
-            format!("{}#aaaaaa", ROUND_DATA_URL).as_str(),
+            format!("{ROUND_DATA_URL}#aaaaaa").as_str(),
             None,
             None,
             None,
@@ -1374,7 +1374,7 @@ mod tests {
     #[test]
     fn test_from_url_cc_perk() {
         let nfc =
-            NeoFoodClub::from_url(format!("/15{}", ROUND_DATA_URL).as_str(), None, None, None);
+            NeoFoodClub::from_url(format!("/15{ROUND_DATA_URL}").as_str(), None, None, None);
 
         let bets = nfc.make_max_ter_bets();
 

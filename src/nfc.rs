@@ -895,7 +895,7 @@ impl NeoFoodClub {
             url.push_str(&format!("&b={}", bets.bets_hash()));
 
             if let Some(amounts_hash) = bets.amounts_hash() {
-                url.push_str(&format!("&a={}", amounts_hash));
+                url.push_str(&format!("&a={amounts_hash}"));
             }
         }
 

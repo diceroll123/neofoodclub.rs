@@ -390,7 +390,7 @@ impl Bets {
                 .position(|&r| r == *bet_binary)
                 .unwrap();
 
-            let hex = format!("0x{:0>5X}", bet_binary);
+            let hex = format!("0x{bet_binary:0>5X}");
 
             row.extend(vec![
                 nfc.round_dict_data().odds[bin_index].to_string(),
