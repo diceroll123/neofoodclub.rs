@@ -928,16 +928,9 @@ fn validate_round_data(round_data: &RoundData) {
         panic!("Round number must be greater than 0.");
     }
 
-    if round_data.pirates.len() != 5 {
-        panic!("Pirates must have 5 arenas.");
-    }
-
     let mut pirate_ids = Vec::<u8>::with_capacity(20);
 
     for arena in round_data.pirates.iter() {
-        if arena.len() != 4 {
-            panic!("Each arena must have 4 pirates.");
-        }
         for pirate in arena.iter() {
             if pirate_ids.contains(pirate) {
                 panic!("Pirates must be unique.");
@@ -949,19 +942,7 @@ fn validate_round_data(round_data: &RoundData) {
         }
     }
 
-    if pirate_ids.len() != 20 {
-        panic!("Pirates must have 20 unique IDs.");
-    }
-
-    if round_data.currentOdds.len() != 5 {
-        panic!("Current odds must have 5 arenas.");
-    }
-
     for arena in round_data.currentOdds.iter() {
-        if arena.len() != 5 {
-            panic!("Each arena in currentOdds must have 5 integers, first one being 1.");
-        }
-
         for (index, odds) in arena.iter().enumerate() {
             if index == 0 {
                 if *odds != 1 {
@@ -973,15 +954,7 @@ fn validate_round_data(round_data: &RoundData) {
         }
     }
 
-    if round_data.openingOdds.len() != 5 {
-        panic!("Opening odds must have 5 arenas.");
-    }
-
     for arena in round_data.openingOdds.iter() {
-        if arena.len() != 5 {
-            panic!("Each arena in openingOdds must have 5 integers, first one being 1.");
-        }
-
         for (index, odds) in arena.iter().enumerate() {
             if index == 0 {
                 if *odds != 1 {
@@ -995,15 +968,7 @@ fn validate_round_data(round_data: &RoundData) {
 
     if round_data.foods.is_some() {
         let foods = round_data.foods.as_ref().unwrap();
-        if foods.len() != 5 {
-            panic!("Foods must have 5 arenas.");
-        }
-
         for arena in foods.iter() {
-            if arena.len() != 10 {
-                panic!("Each arena in foods must have 10 integers.");
-            }
-
             for food in arena.iter() {
                 if *food < 1 || *food > 40 {
                     panic!("Food integers must be between 1 and 40.");
@@ -1014,9 +979,6 @@ fn validate_round_data(round_data: &RoundData) {
 
     if round_data.winners.is_some() {
         let winners = round_data.winners.as_ref().unwrap();
-        if winners.len() != 5 {
-            panic!("Winners must have 5 integers.");
-        }
 
         // the winners have to either be all 0, or all 1-4, let's check both
         let all_zero = winners.iter().all(|&x| x == 0);
