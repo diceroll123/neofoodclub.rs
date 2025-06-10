@@ -145,7 +145,6 @@ impl Bets {
     /// Fills the bet amounts in-place with the maximum possible amount to hit 1 million.
     /// In short, for each bet we divide 1_000_000 by the odds, and round up.
     /// Then we use whichever is smaller, the bet amount or the result of that equation.
-    /// If the result is less than 50, we use 50 instead.
     pub fn fill_bet_amounts(&mut self, nfc: &NeoFoodClub) {
         let Some(bet_amount) = nfc.bet_amount else {
             return;
@@ -160,7 +159,7 @@ impl Bets {
                 div += 1;
             }
 
-            let amount = bet_amount.min(div).max(50);
+            let amount = bet_amount.min(div).max(BET_AMOUNT_MIN);
             amounts.push(Some(amount));
         }
         self.bet_amounts = Some(amounts);

@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_bet_amounts_hash_encoding_and_decoding() {
-        // loop from 50 to 70304 in parallel
+        // loop from 1 to 70304 in parallel
         (BET_AMOUNT_MIN..BET_AMOUNT_MAX)
             .into_par_iter()
             .for_each(|amount| {

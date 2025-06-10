@@ -5,7 +5,7 @@ use rand::Rng;
 
 use crate::chance::Chance;
 
-pub const BET_AMOUNT_MIN: u32 = 50;
+pub const BET_AMOUNT_MIN: u32 = 1;
 pub const BET_AMOUNT_MAX: u32 = 70304;
 
 // WARNING: the literal integers in this file switches between hex and binary willy-nilly, mostly for readability.
@@ -202,7 +202,7 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
 
 /// Returns the bet amounts from a given bet amounts hash.
 /// Each element in the resulting vector is an Option, where None means that the bet amount is invalid.
-/// "Invalid" here means below 50.
+/// "Invalid" here means below 1.
 /// ```
 /// let amounts = neofoodclub::math::amounts_hash_to_bet_amounts("AaYAbWAcUAdSAeQ");
 /// assert_eq!(amounts, vec![Some(50), Some(100), Some(150), Some(200), Some(250)]);
