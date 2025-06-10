@@ -56,7 +56,9 @@ mod tests {
     use std::collections::HashMap;
 
     use chrono::{DateTime, NaiveTime, TimeDelta};
-    use neofoodclub::{bets::BetAmounts, math::make_round_dicts, pirates::PartialPirateThings};
+    use neofoodclub::{
+        bets::BetAmounts, math::make_round_dicts, modifier::Modifier, pirates::PartialPirateThings,
+    };
 
     use super::*;
 
@@ -1685,4 +1687,221 @@ mod tests {
 
         b.iter(|| make_round_dicts(probs, odds));
     }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod panic_tests {
+    use std::collections::HashMap;
+
+    use neofoodclub::{
+        bets::BetAmounts, modifier::Modifier, nfc::NeoFoodClub, round_data::RoundData,
+    };
+
+    use crate::{make_test_nfc, ROUND_DATA_JSON};
+
+    fn get_valid_round_data() -> RoundData {
+        serde_json::from_str(ROUND_DATA_JSON).unwrap()
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid pirate ID, need 1-20, got 21")]
+    fn test_modifier_new_panic_pirate_id_gt() {
+        let mut custom_odds = HashMap::new();
+        custom_odds.insert(21, 2);
+        Modifier::new(0, Some(custom_odds), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid pirate ID, need 1-20, got 0")]
+    fn test_modifier_new_panic_pirate_id_lt() {
+        let mut custom_odds = HashMap::new();
+        custom_odds.insert(0, 2);
+        Modifier::new(0, Some(custom_odds), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid odds, need 2-13, got 14")]
+    fn test_modifier_new_panic_odds_gt() {
+        let mut custom_odds = HashMap::new();
+        custom_odds.insert(1, 14);
+        Modifier::new(0, Some(custom_odds), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid odds, need 2-13, got 1")]
+    fn test_modifier_new_panic_odds_lt() {
+        let mut custom_odds = HashMap::new();
+        custom_odds.insert(1, 1);
+        Modifier::new(0, Some(custom_odds), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Bet amounts must be the same length as bet indices, or None.")]
+    fn test_set_bet_amounts_panic_len() {
+        let nfc = make_test_nfc();
+        let mut bets = nfc.make_crazy_bets();
+        let amounts = BetAmounts::from_amount(100, 5);
+        bets.set_bet_amounts(&Some(amounts));
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid bet hash")]
+    fn test_bets_hash_to_bet_indices_invalid() {
+        neofoodclub::math::bets_hash_to_bet_indices("z");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid hash")]
+    fn test_amounts_hash_to_bet_amounts_invalid() {
+        neofoodclub::math::amounts_hash_to_bet_amounts("!");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid JSON.")]
+    fn test_from_json_invalid() {
+        NeoFoodClub::from_json("not json", None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "No relevant NeoFoodClub-like URL data found.")]
+    fn test_from_url_panic_no_hash() {
+        NeoFoodClub::from_url("no-hash-in-url", None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid query string.")]
+    fn test_from_url_invalid_qs() {
+        NeoFoodClub::from_url("#?boom", None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Pirates binary must have 5 pirates.")]
+    fn test_make_gambit_bets_panic() {
+        let nfc = make_test_nfc();
+        nfc.make_gambit_bets(0b1);
+    }
+
+    #[test]
+    #[should_panic(expected = "You can only pick 1 pirate per arena.")]
+    fn test_make_tenbet_bets_panic() {
+        let nfc = make_test_nfc();
+        nfc.make_tenbet_bets(0b11).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_timestamp_to_utc_panic() {
+        neofoodclub::utils::timestamp_to_utc("invalid");
+    }
+
+    // region: validate_round_data panics
+    #[test]
+    #[should_panic(expected = "Round number must be greater than 0.")]
+    fn test_validate_round_0() {
+        let mut round_data = get_valid_round_data();
+        round_data.round = 0;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Pirates must be unique.")]
+    fn test_validate_duplicate_pirate_id() {
+        let mut round_data = get_valid_round_data();
+        round_data.pirates[0][0] = round_data.pirates[1][0];
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Pirate IDs must be between 1 and 20.")]
+    fn test_validate_pirate_id_zero() {
+        let mut round_data = get_valid_round_data();
+        round_data.pirates[0][0] = 0;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Pirate IDs must be between 1 and 20.")]
+    fn test_validate_pirate_id_21() {
+        let mut round_data = get_valid_round_data();
+        round_data.pirates[0][0] = 21;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "First integer in each arena in currentOdds must be 1.")]
+    fn test_validate_current_odds_first_not_1() {
+        let mut round_data = get_valid_round_data();
+        round_data.currentOdds[0][0] = 2;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Odds must be between 2 and 13.")]
+    fn test_validate_current_odds_lt() {
+        let mut round_data = get_valid_round_data();
+        round_data.currentOdds[0][1] = 1;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Odds must be between 2 and 13.")]
+    fn test_validate_current_odds_gt() {
+        let mut round_data = get_valid_round_data();
+        round_data.currentOdds[0][1] = 14;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "First integer in each arena in openingOdds must be 1.")]
+    fn test_validate_opening_odds_first_not_1() {
+        let mut round_data = get_valid_round_data();
+        round_data.openingOdds[0][0] = 2;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Odds must be between 2 and 13.")]
+    fn test_validate_opening_odds_lt() {
+        let mut round_data = get_valid_round_data();
+        round_data.openingOdds[0][1] = 1;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Odds must be between 2 and 13.")]
+    fn test_validate_opening_odds_gt() {
+        let mut round_data = get_valid_round_data();
+        round_data.openingOdds[0][1] = 14;
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Food integers must be between 1 and 40.")]
+    fn test_validate_foods_value_lt() {
+        let mut round_data = get_valid_round_data();
+        let mut foods = round_data.foods.unwrap();
+        foods[0][0] = 0;
+        round_data.foods = Some(foods);
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Food integers must be between 1 and 40.")]
+    fn test_validate_foods_value_gt() {
+        let mut round_data = get_valid_round_data();
+        let mut foods = round_data.foods.unwrap();
+        foods[0][0] = 41;
+        round_data.foods = Some(foods);
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Winners must either be all 0, or all 1-4.")]
+    fn test_validate_winners_mixed() {
+        let mut round_data = get_valid_round_data();
+        round_data.winners = Some([1, 2, 3, 4, 0]);
+        NeoFoodClub::new(round_data, None, None, None);
+    }
+    // endregion
 }
