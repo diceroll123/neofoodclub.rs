@@ -36,21 +36,7 @@ fn get_base_round_data() -> RoundData {
     }
 }
 
-// NOTE: The following panic conditions from `validate_round_data` are not tested
-// because they are currently unreachable. The `RoundData` struct uses fixed-size arrays,
-// so the compiler enforces these constraints at compile time.
-// - `panic!("Pirates must have 5 arenas.");`
-// - `panic!("Each arena must have 4 pirates.");`
-// - `panic!("Pirates must have 20 unique IDs.");`
-// - `panic!("Current odds must have 5 arenas.");`
-// - `panic!("Each arena in currentOdds must have 5 integers...");` (length part)
-// - `panic!("Opening odds must have 5 arenas.");`
-// - `panic!("Each arena in openingOdds must have 5 integers...");` (length part)
-// - `panic!("Foods must have 5 arenas.");`
-// - `panic!("Each arena in foods must have 10 integers.");`
-// - `panic!("Winners must have 5 integers.");`
-
-// Also, the `unreachable!` macro in `make_bustproof_bets` is not tested as it's
+// the `unreachable!` macro in `make_bustproof_bets` is not tested as it's
 // intended to be unreachable.
 
 #[test]
