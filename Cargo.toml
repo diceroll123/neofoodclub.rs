@@ -22,3 +22,6 @@ name = "neofoodclub"
 [[example]]
 name = "all_bets_table"
 path = "examples/all_bets_table.rs"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage,coverage_nightly)'] }
