@@ -36,9 +36,6 @@ fn get_base_round_data() -> RoundData {
     }
 }
 
-// the `unreachable!` macro in `make_bustproof_bets` is not tested as it's
-// intended to be unreachable.
-
 #[test]
 #[should_panic(expected = "Round number must be greater than 0.")]
 fn test_round_zero() {

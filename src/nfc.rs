@@ -621,6 +621,11 @@ impl NeoFoodClub {
         bets
     }
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
+    fn bustproof_unreachable() -> ! {
+        unreachable!("This should never happen.");
+    }
+
     /// Creates a Bets object that consists of bustproof bets.
     /// Returns None if there are no positive arenas.
     pub fn make_bustproof_bets(&self) -> Option<Bets> {
@@ -693,7 +698,7 @@ impl NeoFoodClub {
 
                 Some(Bets::from_binaries(self, binaries))
             }
-            _ => unreachable!("This should never happen."),
+            _ => Self::bustproof_unreachable(),
         };
 
         // give it bet amounts
