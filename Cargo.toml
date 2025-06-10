@@ -4,20 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-itertools = "0.13.0"
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
-rand = "0.8.5"
-bitflags = "2.6.0"
-serde_qs = "0.13.0"
-regex = "1.11.0"
+itertools = "0.14.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+rand = "0.9.0"
+bitflags = "2.9.0"
+serde_qs = "0.14.0"
+regex = "1.11.1"
 querystring = "1.1.0"
-chrono = "0.4.38"
-chrono-tz = "0.10.0"
-comfy-table = "7.1.1"
-
-[dev-dependencies]
-rayon = "1.10.0"
+chrono = "0.4.40"
+chrono-tz = "0.10.3"
+comfy-table = "7.1.4"
 
 [lib]
 name = "neofoodclub"

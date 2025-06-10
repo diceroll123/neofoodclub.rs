@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 use rand::Rng;
 
 use crate::chance::Chance;
+use std::sync::OnceLock;
 
 pub const BET_AMOUNT_MIN: u32 = 1;
 pub const BET_AMOUNT_MAX: u32 = 70304;
@@ -21,6 +22,9 @@ const PIR_IB: [u32; 4] = [0x88888, 0x44444, 0x22222, 0x11111];
 
 // 0xFFFFF = 0b11111111111111111111 (20 '1's), will accept all pirates
 const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
+
+static VALID_AMOUNT_HASH_REGEX: OnceLock<regex::Regex> = OnceLock::new();
+static VALID_BETS_HASH_REGEX: OnceLock<regex::Regex> = OnceLock::new();
 
 /// ```
 /// let bin = neofoodclub::math::pirate_binary(3, 2);
@@ -54,14 +58,14 @@ pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
 /// ```
 #[inline]
 pub fn random_full_pirates_binary() -> u32 {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     pirates_binary([
-        rng.gen_range(1..=4),
-        rng.gen_range(1..=4),
-        rng.gen_range(1..=4),
-        rng.gen_range(1..=4),
-        rng.gen_range(1..=4),
+        rng.random_range(1..=4),
+        rng.random_range(1..=4),
+        rng.random_range(1..=4),
+        rng.random_range(1..=4),
+        rng.random_range(1..=4),
     ])
 }
 
@@ -72,10 +76,12 @@ pub fn random_full_pirates_binary() -> u32 {
 #[inline]
 pub fn binary_to_indices(binary: u32) -> [u8; 5] {
     let mut indices = [0; 5];
-    for (i, &mask) in BIT_MASKS.iter().enumerate() {
-        let masked = mask & binary;
-        if masked != 0 {
-            indices[i] = 4 - (masked.trailing_zeros() % 4) as u8;
+
+    for (i, index) in indices.iter_mut().enumerate() {
+        let nibble = (binary >> (4 * (4 - i))) & 0xF;
+
+        if nibble != 0 {
+            *index = 4 - nibble.trailing_zeros() as u8;
         }
     }
     indices
@@ -83,7 +89,10 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 
 #[inline]
 pub fn bets_hash_regex_check(bets_hash: &str) {
-    if !regex::Regex::new("^[a-y]*$").unwrap().is_match(bets_hash) {
+    let valid_bets_hash_regex =
+        VALID_BETS_HASH_REGEX.get_or_init(|| regex::Regex::new("^[a-y]*$").unwrap());
+
+    if !valid_bets_hash_regex.is_match(bets_hash) {
         panic!("Invalid bet hash");
     }
 }
@@ -109,7 +118,7 @@ pub fn bets_hash_regex_check(bets_hash: &str) {
 pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
     bets_hash_regex_check(bets_hash);
 
-    let indices: Vec<u8> = bets_hash.chars().map(|chr| chr as u8 - b'a').collect();
+    let indices: Vec<u8> = bets_hash.bytes().map(|byte| byte - b'a').collect();
 
     let mut output: Vec<u8> = indices
         .iter()
@@ -174,30 +183,26 @@ pub fn bets_hash_to_bets_count(bets_hash: &str) -> usize {
 /// ```
 #[inline]
 pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
-    bet_amounts
-        .iter()
-        .map(|&value| {
-            // if the value is None, we'll just use 0
-            // this used to be -1000, but we want to keep it as a u32 which can't go below 0
-            let mut state = value.unwrap_or(0) % BET_AMOUNT_MAX + BET_AMOUNT_MAX;
+    let mut result = vec!['\0'; bet_amounts.len() * 3];
+    let mut index = result.len();
 
-            (0..3)
-                .map(|_| {
-                    let letter_index = (state % 52) as u8;
-                    state /= 52;
+    for &value in bet_amounts.iter().rev() {
+        let mut state = value.unwrap_or(0) % BET_AMOUNT_MAX + BET_AMOUNT_MAX;
 
-                    if letter_index < 26 {
-                        (letter_index + b'a') as char
-                    } else {
-                        (letter_index + b'A' - 26) as char
-                    }
-                })
-                .collect::<String>()
-                .chars()
-                .rev()
-                .collect::<String>()
-        })
-        .collect()
+        for _ in 0..3 {
+            index -= 1;
+            let letter_index = (state % 52) as u8;
+            state /= 52;
+
+            result[index] = if letter_index < 26 {
+                (letter_index + b'a') as char
+            } else {
+                (letter_index + b'A' - 26) as char
+            };
+        }
+    }
+
+    result.iter().collect()
 }
 
 /// Returns the bet amounts from a given bet amounts hash.
@@ -211,35 +216,33 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
 /// ```
 #[inline]
 pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
-    // check that the hash matches regex "^[a-y]+$" using regex
-    if !regex::Regex::new("^[a-zA-Z]*$")
-        .unwrap()
-        .is_match(amounts_hash)
-    {
+    // check that the hash matches regex "^[a-zA-Z]*$" using regex
+    let valid_hash_regex =
+        VALID_AMOUNT_HASH_REGEX.get_or_init(|| regex::Regex::new("^[a-zA-Z]*$").unwrap());
+
+    // Check that the hash matches the regex
+    if !valid_hash_regex.is_match(amounts_hash) {
         panic!("Invalid hash");
     }
 
     amounts_hash
-        .chars()
-        .collect::<Vec<_>>()
+        .as_bytes()
         .chunks(3)
         .map(|chunk| {
             let mut value = 0_u32;
-            for &n in chunk {
+
+            for &byte in chunk {
                 value *= 52;
-                let index = (('a'..='z')
-                    .chain('A'..='Z')
-                    .position(|c| c as u8 == n as u8)
-                    .unwrap_or_default()) as u32;
+                let index = if let b'a'..=b'z' = byte {
+                    (byte - b'a') as u32
+                } else {
+                    (byte - b'A' + 26) as u32
+                };
                 value += index;
             }
 
             let value = value.saturating_sub(BET_AMOUNT_MAX);
-            if value < BET_AMOUNT_MIN {
-                None
-            } else {
-                Some(value)
-            }
+            Some(value).filter(|&v| v >= BET_AMOUNT_MIN)
         })
         .collect()
 }
@@ -271,23 +274,20 @@ pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Vec<u32> {
 /// ```
 #[inline]
 pub fn bets_hash_value(bets_indices: Vec<[u8; 5]>) -> String {
-    let mut flattened: Vec<u8> = bets_indices.into_iter().flatten().collect();
+    let len = bets_indices.len();
 
-    if flattened.len() % 2 != 0 {
-        flattened.push(0);
-    }
-
-    flattened
+    bets_indices
+        .into_iter()
+        .flatten()
+        .chain(std::iter::once(0).take(len & 1))
+        .collect::<Vec<u8>>()
         .chunks_exact(2)
         .map(|chunk| {
-            let [multiplier, adder] = [chunk[0], chunk[1]];
-
             // char_index is the index of the character in the alphabet
             // 0 = a, 1 = b, 2 = c, ..., 25 = z
-            let char_index = multiplier * 5 + adder;
-
+            let char_index = chunk[0] * 5 + chunk[1];
             // b'a' is the byte literal for the ASCII "a", which is 97
-            char::from(b'a' + char_index).to_string()
+            (b'a' + char_index) as char
         })
         .collect()
 }
@@ -320,14 +320,18 @@ fn ib_prob(binary: u32, probabilities: [[f64; 5]; 5]) -> f64 {
         .iter()
         .enumerate()
         .fold(1.0, |total_prob, (x, bit_mask)| {
-            PIR_IB.iter().enumerate().fold(0.0, |ar_prob, (y, pir_ib)| {
-                ar_prob
-                    + if binary & bit_mask & pir_ib > 0 {
+            let ar_prob: f64 = PIR_IB
+                .iter()
+                .enumerate()
+                .map(|(y, &pir_ib)| {
+                    if binary & bit_mask & pir_ib > 0 {
                         probabilities[x][y + 1]
                     } else {
                         0.0
                     }
-            }) * total_prob
+                })
+                .sum();
+            total_prob * ar_prob
         })
 }
 
@@ -336,7 +340,6 @@ pub fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32>
     // this is why the bet table could be very long
 
     let mut bets_to_ib: HashMap<u32, u32> = HashMap::new();
-
     for (key, bet_value) in bets.iter().enumerate() {
         let ib = bet_value
             .iter()
@@ -361,7 +364,6 @@ pub fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32>
             let val_key = res
                 .remove(&ib_key)
                 .expect("Failed to retrieve value for ib_key");
-
             res.insert(com, winnings + val_key);
             for ar in BIT_MASKS {
                 let tst = ib_key ^ (com & ar);
@@ -447,7 +449,6 @@ pub fn build_chance_objects(
     probabilities: [[f64; 5]; 5],
 ) -> Vec<Chance> {
     let expanded = expand_ib_object(bets, bet_odds);
-
     let mut win_table: BTreeMap<u32, f64> = BTreeMap::new();
     for (key, value) in expanded.iter() {
         *win_table.entry(*value).or_insert(0.0) += ib_prob(*key, probabilities);
@@ -458,7 +459,6 @@ pub fn build_chance_objects(
     let mut chances: Vec<Chance> = Vec::with_capacity(win_table.len());
     for (key, value) in win_table.into_iter() {
         cumulative += value;
-
         chances.push(Chance {
             value: key,
             probability: value,

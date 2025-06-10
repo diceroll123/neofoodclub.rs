@@ -3,7 +3,7 @@ use std::f64::consts::E;
 use crate::arena::Arenas;
 
 #[derive(Debug, Clone)]
-pub struct MultinomialLogitModel {}
+pub struct MultinomialLogitModel;
 
 impl MultinomialLogitModel {
     #[allow(clippy::new_ret_no_self)]

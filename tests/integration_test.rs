@@ -57,7 +57,6 @@ mod tests {
 
     use chrono::{DateTime, NaiveTime, TimeDelta};
     use neofoodclub::{bets::BetAmounts, math::make_round_dicts, pirates::PartialPirateThings};
-    use rayon::prelude::*;
 
     use super::*;
 
@@ -320,17 +319,15 @@ mod tests {
 
     #[test]
     fn test_bet_amounts_hash_encoding_and_decoding() {
-        // loop from 1 to 70304 in parallel
-        (BET_AMOUNT_MIN..BET_AMOUNT_MAX)
-            .into_par_iter()
-            .for_each(|amount| {
-                let amounts = vec![Some(amount); 10];
-                let hash = math::bet_amounts_to_amounts_hash(&amounts);
-                assert_eq!(
-                    math::amounts_hash_to_bet_amounts(&hash),
-                    vec![Some(amount); 10]
-                );
-            });
+        // loop from 50 to 70304 in parallel
+        (BET_AMOUNT_MIN..BET_AMOUNT_MAX).for_each(|amount| {
+            let amounts = vec![Some(amount); 10];
+            let hash = math::bet_amounts_to_amounts_hash(&amounts);
+            assert_eq!(
+                math::amounts_hash_to_bet_amounts(&hash),
+                vec![Some(amount); 10]
+            );
+        });
     }
 
     #[test]
@@ -636,6 +633,38 @@ mod tests {
         let bets = nfc.make_crazy_bets();
 
         assert!(!bets.is_tenbet());
+    }
+
+    #[test]
+    fn test_count_tenbets_zero() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_bustproof_bets().unwrap();
+
+        assert_eq!(bets.count_tenbets(), 0);
+    }
+
+    #[test]
+    fn test_count_tenbets_one() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_tenbet_bets(0x80000);
+
+        assert_eq!(bets.unwrap().count_tenbets(), 1);
+    }
+
+    #[test]
+    fn test_count_tenbets_two() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_tenbet_bets(0x88000);
+
+        assert_eq!(bets.unwrap().count_tenbets(), 2);
+    }
+
+    #[test]
+    fn test_count_tenbets_three() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_tenbet_bets(0x88800);
+
+        assert_eq!(bets.unwrap().count_tenbets(), 3);
     }
 
     #[test]
@@ -1331,6 +1360,37 @@ mod tests {
         let bets = nfc.make_bets_from_binaries(vec![0x1]);
 
         assert!(!bets.is_gambit());
+    }
+
+    #[test]
+    fn test_most_likely_winner() {
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_bets_from_binaries(vec![0x1, 0x10]);
+
+        assert_eq!(bets.odds.most_likely_winner().value, 4);
+    }
+
+    #[test]
+    fn test_best_odds() {
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_bets_from_binaries(vec![0x1, 0x11]);
+
+        assert_eq!(bets.odds.best().value, 28);
+    }
+
+    #[test]
+    fn test_partial_rate() {
+        let nfc = make_test_nfc();
+
+        let bets = nfc.make_bets_from_binaries(vec![0x1, 0x20, 0x01248, 0x01244, 0x01240]);
+
+        let rate = bets.odds.partial_rate();
+
+        // 0.18350651041666674 but it can differ slightly on different systems
+        assert!(rate < 0.19);
+        assert!(rate > 0.18);
     }
 
     #[test]

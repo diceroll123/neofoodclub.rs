@@ -1,7 +1,7 @@
 use crate::round_data::RoundData;
 
 #[derive(Debug, Clone)]
-pub struct OriginalModel {}
+pub struct OriginalModel;
 
 impl OriginalModel {
     #[allow(clippy::new_ret_no_self)]
