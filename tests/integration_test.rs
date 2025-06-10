@@ -1373,8 +1373,7 @@ mod tests {
 
     #[test]
     fn test_from_url_cc_perk() {
-        let nfc =
-            NeoFoodClub::from_url(format!("/15{ROUND_DATA_URL}").as_str(), None, None, None);
+        let nfc = NeoFoodClub::from_url(format!("/15{ROUND_DATA_URL}").as_str(), None, None, None);
 
         let bets = nfc.make_max_ter_bets();
 
