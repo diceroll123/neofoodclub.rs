@@ -621,7 +621,7 @@ impl NeoFoodClub {
         bets
     }
 
-    #[cfg_attr(coverage_nightly, coverage(off))]
+    #[cfg_attr(coverage, coverage(off))]
     fn bustproof_unreachable() -> ! {
         unreachable!("This should never happen.");
     }
