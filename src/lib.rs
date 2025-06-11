@@ -1,5 +1,3 @@
-#![cfg_attr(coverage, feature(coverage_attribute))]
-
 pub mod arena;
 pub mod bets;
 pub mod chance;
