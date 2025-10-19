@@ -236,7 +236,7 @@ impl NeoFoodClub {
     }
 
     /// Returns a vector of the winning pirates, if any.
-    pub fn winning_pirates(&self) -> Option<Vec<&Pirate>> {
+    pub fn winning_pirates(&self) -> Option<Vec<Pirate>> {
         let bin = self.winners_binary();
 
         if bin == 0 {

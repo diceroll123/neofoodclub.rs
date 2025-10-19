@@ -215,8 +215,8 @@ impl Bets {
     }
 
     /// Returns the bet binaries
-    pub fn get_binaries(&self) -> &Vec<u32> {
-        &self.bet_binaries
+    pub fn get_binaries(&self) -> Vec<u32> {
+        self.bet_binaries.to_vec()
     }
 
     /// Returns a string of the hash of the bets

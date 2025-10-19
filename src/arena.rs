@@ -156,7 +156,7 @@ impl Arenas {
     }
 
     /// Returns a vector of pirates from a binary representation.
-    pub fn get_pirates_from_binary(&self, binary: u32) -> Vec<&Pirate> {
+    pub fn get_pirates_from_binary(&self, binary: u32) -> Vec<Pirate> {
         let indices = binary_to_indices(binary);
         self.arenas
             .iter()
@@ -165,7 +165,7 @@ impl Arenas {
                 if pirate_index == 0 {
                     None
                 } else {
-                    Some(&arena.pirates[(pirate_index - 1) as usize])
+                    Some(arena.pirates[(pirate_index - 1) as usize].clone())
                 }
             })
             .collect()
@@ -181,7 +181,7 @@ impl Arenas {
 
     /// Returns the arenas sorted by best odds.
     pub fn best(&self) -> Vec<Arena> {
-        let mut best: Vec<Arena> = self.arenas.iter().map(|a| a.clone()).collect();
+        let mut best: Vec<Arena> = self.arenas.iter().cloned().collect();
         best.sort_by(|a, b| a.odds.total_cmp(&b.odds));
         best
     }
