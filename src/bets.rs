@@ -39,7 +39,7 @@ impl BetAmounts {
             return BetAmounts::None;
         }
 
-        if amount > BET_AMOUNT_MAX || amount <= BET_AMOUNT_MIN {
+        if amount > BET_AMOUNT_MAX || amount < BET_AMOUNT_MIN {
             return BetAmounts::None;
         }
 
