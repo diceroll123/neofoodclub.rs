@@ -1655,6 +1655,225 @@ mod tests {
         assert_eq!(mer.get_binaries(), reset_mer.get_binaries());
     }
 
+    #[test]
+    fn test_odds_bust_some() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_bets_from_binaries(vec![0x11111]);
+
+        let bust = bets.odds.bust();
+        assert!(bust.is_some());
+    }
+
+    #[test]
+    fn test_odds_chances() {
+        let nfc = make_test_nfc();
+        let bets = nfc.make_bets_from_binaries(vec![0x1, 0x2]);
+
+        let chances = bets.odds.chances();
+        assert!(!chances.is_empty());
+    }
+
+    #[test]
+    fn test_round_data_timestamps() {
+        let nfc = make_test_nfc();
+
+        assert!(nfc.round_data.start_nst().is_some());
+        assert!(nfc.round_data.last_change_nst().is_some());
+        assert!(nfc.round_data.timestamp_nst().is_some());
+        assert!(nfc.round_data.start_utc().is_some());
+        assert!(nfc.round_data.last_change_utc().is_some());
+        assert!(nfc.round_data.timestamp_utc().is_some());
+    }
+
+    #[test]
+    fn test_odds_change_methods() {
+        let nfc = make_test_nfc();
+        let changes = nfc.round_data.changes.as_ref().unwrap();
+        let first_change = &changes[0];
+
+        assert!(first_change.pirate(&nfc).id > 0);
+        assert!(first_change.pirate_id(&nfc) > 0);
+        assert!(!first_change.arena().is_empty());
+        assert!(first_change.pirate_index() > 0 && first_change.pirate_index() <= 4);
+        assert!(first_change.arena_index() < 5);
+        assert!(first_change.timestamp_nst().to_string().contains("2023"));
+        assert!(first_change.timestamp_utc().to_string().contains("2023"));
+    }
+
+    #[test]
+    fn test_utils_argsort() {
+        use neofoodclub::utils::argsort_by;
+
+        let arr = vec![5, 4, 3, 2, 1, 6, 7, 8, 9, 0];
+        let indices = argsort_by(&arr, &|a: &u8, b: &u8| a.cmp(b));
+        assert_eq!(indices, vec![9, 4, 3, 2, 1, 0, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn test_utils_dst_offset() {
+        use chrono::Utc;
+        use neofoodclub::utils::get_dst_offset;
+
+        let today = Utc::now();
+        let offset = get_dst_offset(today);
+        assert!(offset.num_hours() >= -1 && offset.num_hours() <= 1);
+    }
+
+    #[test]
+    fn test_pirate_methods() {
+        use neofoodclub::pirates::PartialPirateThings;
+
+        let nfc = make_test_nfc();
+        let pirate = nfc.get_arenas().arenas[0].pirates[0];
+
+        assert!(pirate.binary() > 0);
+        assert!(!pirate.get_name().is_empty());
+        assert!(pirate
+            .get_image()
+            .contains("http://images.neopets.com/pirates/fc/fc_pirate_"));
+    }
+
+    #[test]
+    fn test_partial_pirate_traits() {
+        use neofoodclub::pirates::{PartialPirate, PartialPirateThings};
+
+        let partial_pirate = PartialPirate { id: 1 };
+        assert_eq!(partial_pirate.get_name(), "Dan");
+        assert_eq!(
+            partial_pirate.get_image(),
+            "http://images.neopets.com/pirates/fc/fc_pirate_1.gif"
+        );
+    }
+
+    #[test]
+    fn test_arena_methods() {
+        let nfc = make_test_nfc();
+        let arena = &nfc.get_arenas().arenas[0];
+
+        assert_eq!(arena.get_name(), "Shipwreck");
+        assert_eq!(arena.best().len(), 4);
+        assert_eq!(arena.ids().len(), 4);
+        assert!(arena.ratio().is_finite());
+        assert!(arena.get_pirate_by_index(0).is_some());
+        assert!(arena.get_pirate_by_index(10).is_none());
+    }
+
+    #[test]
+    fn test_arenas_collection_methods() {
+        let nfc = make_test_nfc();
+        let arenas = nfc.get_arenas();
+
+        assert!(arenas.get_pirate_by_id(1).is_some());
+        assert!(arenas.get_pirate_by_id(99).is_none());
+        assert!(!arenas.get_pirates_by_id(&[1, 2, 3]).is_empty());
+        assert_eq!(arenas.get_all_pirates_flat().len(), 20);
+        assert_eq!(arenas.get_pirates_from_binary(0x11111).len(), 5);
+        assert_eq!(arenas.best().len(), 5);
+        assert!(arenas.get_arena(0).is_some());
+        assert!(arenas.get_arena(10).is_none());
+    }
+
+    #[test]
+    fn test_math_functions() {
+        use neofoodclub::math::{
+            amounts_hash_to_bet_amounts, bets_hash_regex_check, binary_to_indices, pirate_binary,
+            pirates_binary, random_full_pirates_binary,
+        };
+
+        assert_eq!(pirate_binary(3, 2), 0x200);
+        assert_eq!(pirate_binary(0, 2), 0);
+        assert_eq!(pirates_binary([0, 1, 2, 3, 4]), 0x08421);
+        assert_eq!(random_full_pirates_binary().count_ones(), 5);
+        assert_eq!(binary_to_indices(1), [0, 0, 0, 0, 4]);
+        assert!(bets_hash_regex_check("abcdefg").is_ok());
+        assert!(bets_hash_regex_check("abcdefz").is_err());
+        assert_eq!(
+            amounts_hash_to_bet_amounts("AaYAbWAcUAdSAeQ").unwrap(),
+            vec![Some(50), Some(100), Some(150), Some(200), Some(250)]
+        );
+        assert!(amounts_hash_to_bet_amounts("invalid!").is_err());
+    }
+
+    #[test]
+    fn test_modifier_flags() {
+        use neofoodclub::modifier::ModifierFlags;
+
+        let empty = Modifier::new(ModifierFlags::EMPTY.bits(), None, None).unwrap();
+        assert!(empty.is_empty());
+
+        let general = Modifier::new(ModifierFlags::GENERAL.bits(), None, None).unwrap();
+        assert!(general.is_general());
+
+        let opening = Modifier::new(ModifierFlags::OPENING_ODDS.bits(), None, None).unwrap();
+        assert!(opening.is_opening_odds());
+
+        let reverse = Modifier::new(ModifierFlags::REVERSE.bits(), None, None).unwrap();
+        assert!(reverse.is_reverse());
+
+        let cc = Modifier::new(ModifierFlags::CHARITY_CORNER.bits(), None, None).unwrap();
+        assert!(cc.is_charity_corner());
+
+        let copy = general.copy();
+        assert_eq!(general, copy);
+    }
+
+    #[test]
+    fn test_bet_amounts_variants() {
+        let hash = BetAmounts::AmountHash("AaYAbWAcUAdSAeQ".to_string());
+        assert_eq!(
+            hash.to_vec(10).unwrap().unwrap(),
+            vec![Some(50), Some(100), Some(150), Some(200), Some(250)]
+        );
+
+        let amounts = BetAmounts::Amounts(vec![Some(1000), Some(2000), None]);
+        assert_eq!(
+            amounts.to_vec(3).unwrap(),
+            Some(vec![Some(1000), Some(2000)])
+        );
+
+        let all_same = BetAmounts::AllSame(5000);
+        assert_eq!(all_same.to_vec(5).unwrap(), Some(vec![Some(5000); 5]));
+        assert_eq!(all_same.to_vec(0).unwrap(), None);
+
+        assert_eq!(BetAmounts::None.to_vec(5).unwrap(), None);
+        assert_eq!(BetAmounts::from_amount(5000), BetAmounts::AllSame(5000));
+        assert_eq!(BetAmounts::from_amount(0), BetAmounts::None);
+    }
+
+    #[test]
+    fn test_bets_methods() {
+        use neofoodclub::bets::Bets;
+
+        let nfc = make_test_nfc();
+
+        // Test construction methods
+        let bets = Bets::try_new(&nfc, vec![1, 2, 3], BetAmounts::AllSame(5000));
+        assert!(bets.is_ok());
+
+        let bets_with_amount = Bets::new_with_amount(&nfc, vec![1, 2, 3], Some(5000));
+        assert!(bets_with_amount.bet_amounts.is_some());
+
+        // Test various methods on bets
+        let bets = nfc.make_bets_from_binaries(vec![0x1, 0x2, 0x4]);
+        assert!(!bets.bets_hash().is_empty());
+        assert!(!bets.is_crazy());
+        assert!(bets.net_expected(&nfc).is_finite());
+        assert!(bets.expected_return(&nfc) > 0.0);
+        assert_eq!(bets.get_indices().len(), 3);
+        assert_eq!(bets.get_binaries().len(), 3);
+        assert_eq!(bets.len(), 3);
+        assert!(!bets.is_empty());
+        assert!(!bets.make_url(&nfc, false, false).is_empty());
+
+        // Test crazy bets
+        let crazy = nfc.make_bets_from_binaries(vec![0x11111; 10]);
+        assert!(crazy.is_crazy());
+
+        // Test empty bets
+        let empty = nfc.make_bets_from_binaries(vec![]);
+        assert!(empty.is_empty());
+    }
+
     #[bench]
     fn bench_new_json(b: &mut Bencher) {
         b.iter(|| NeoFoodClub::from_json(ROUND_DATA_JSON, None, None, None));
