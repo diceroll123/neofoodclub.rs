@@ -1869,9 +1869,13 @@ mod tests {
         let crazy = nfc.make_bets_from_binaries(vec![0x11111; 10]);
         assert!(crazy.is_crazy());
 
-        // Test empty bets
-        let empty = nfc.make_bets_from_binaries(vec![]);
+        // Test empty bets with AllSame bet amounts
+        let mut empty = nfc.make_bets_from_binaries(vec![]);
         assert!(empty.is_empty());
+        empty
+            .set_bet_amounts(&Some(BetAmounts::AllSame(5000)))
+            .unwrap();
+        assert!(empty.bet_amounts.is_none());
     }
 
     #[bench]
