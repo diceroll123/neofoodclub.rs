@@ -1877,6 +1877,15 @@ mod tests {
         let empty_with_amount = Bets::new_with_amount(&nfc, vec![], Some(5000));
         assert!(empty_with_amount.is_empty());
         assert!(empty_with_amount.bet_amounts.is_none());
+
+        // Test set_bet_amounts with None (covers early return)
+        let mut bets_with_amounts = nfc.make_bets_from_binaries(vec![0x1, 0x2]);
+        bets_with_amounts
+            .set_bet_amounts(&Some(BetAmounts::AllSame(5000)))
+            .unwrap();
+        assert!(bets_with_amounts.bet_amounts.is_some());
+        bets_with_amounts.set_bet_amounts(&None).unwrap();
+        assert!(bets_with_amounts.bet_amounts.is_none());
     }
 
     #[bench]
