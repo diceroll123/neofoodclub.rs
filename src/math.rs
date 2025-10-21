@@ -1,4 +1,3 @@
-use core::panic;
 use std::collections::{BTreeMap, HashMap};
 
 use rand::Rng;
@@ -88,35 +87,39 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 }
 
 #[inline]
-pub fn bets_hash_regex_check(bets_hash: &str) {
+pub fn bets_hash_regex_check(bets_hash: &str) -> Result<(), String> {
     let valid_bets_hash_regex =
         VALID_BETS_HASH_REGEX.get_or_init(|| regex::Regex::new("^[a-y]*$").unwrap());
 
     if !valid_bets_hash_regex.is_match(bets_hash) {
-        panic!("Invalid bet hash");
+        return Err(format!(
+            "Invalid bet hash '{}'. Must contain only characters a-y.",
+            bets_hash
+        ));
     }
+    Ok(())
 }
 
 /// Returns the bet indices from a given bet hash.
 /// ```
-/// let bin = neofoodclub::math::bets_hash_to_bet_indices("");
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("").unwrap();
 /// assert_eq!(bin, Vec::<[u8;5]>::new());
 ///
-/// let bin = neofoodclub::math::bets_hash_to_bet_indices("f");
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("f").unwrap();
 /// assert_eq!(bin, [[1, 0, 0, 0, 0]]);
 ///
-/// let bin = neofoodclub::math::bets_hash_to_bet_indices("faa");
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("faa").unwrap();
 /// assert_eq!(bin, [[1, 0, 0, 0, 0]]);
 ///
-/// let bin = neofoodclub::math::bets_hash_to_bet_indices("faafaafaafaafaafaa");
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("faafaafaafaafaafaa").unwrap();
 /// assert_eq!(bin, [[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 1], [1, 0, 0, 0, 0]]);
 ///
-/// let bin = neofoodclub::math::bets_hash_to_bet_indices("jmbcoemycobmbhofmdcoamyck");
+/// let bin = neofoodclub::math::bets_hash_to_bet_indices("jmbcoemycobmbhofmdcoamyck").unwrap();
 /// assert_eq!(bin, [[1, 4, 2, 2, 0], [1, 0, 2, 2, 4], [0, 4, 2, 2, 4], [4, 0, 2, 2, 4], [0, 1, 2, 2, 0], [1, 1, 2, 2, 4], [1, 0, 2, 2, 0], [3, 0, 2, 2, 4], [0, 0, 2, 2, 4], [4, 0, 2, 2, 0]]);
 /// ```
 #[inline]
-pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
-    bets_hash_regex_check(bets_hash);
+pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Result<Vec<[u8; 5]>, String> {
+    bets_hash_regex_check(bets_hash)?;
 
     let indices: Vec<u8> = bets_hash.bytes().map(|byte| byte - b'a').collect();
 
@@ -138,7 +141,7 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
     // "faafaafaafaafaafaa" -> [[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 1], [0, 0, 0, 0, 0], [1, 0, 0, 0, 0]]
     // --------------------------------------------------------------------------------------------------------------^ note the array containing all zeros
 
-    output
+    Ok(output
         .chunks(5)
         .filter_map(|chunk| {
             if chunk.iter().any(|&n| n > 0) {
@@ -147,27 +150,27 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Vec<[u8; 5]> {
                 None
             }
         })
-        .collect()
+        .collect())
 }
 
 /// Returns the amount of bets from a given bet hash.
 /// ```
-/// let count = neofoodclub::math::bets_hash_to_bets_count("faa");
+/// let count = neofoodclub::math::bets_hash_to_bets_count("faa").unwrap();
 /// assert_eq!(count, 1);
 ///
-/// let count = neofoodclub::math::bets_hash_to_bets_count("faafaafaafaafaafaa");
+/// let count = neofoodclub::math::bets_hash_to_bets_count("faafaafaafaafaafaa").unwrap();
 /// assert_eq!(count, 6);
 ///
-/// let count = neofoodclub::math::bets_hash_to_bets_count("jmbcoemycobmbhofmdcoamyck");
+/// let count = neofoodclub::math::bets_hash_to_bets_count("jmbcoemycobmbhofmdcoamyck").unwrap();
 /// assert_eq!(count, 10);
 ///
-/// let count = neofoodclub::math::bets_hash_to_bets_count("dgpqsxgtqsigqqsngrqsegpvsdgfqqsgsqsdgk");
+/// let count = neofoodclub::math::bets_hash_to_bets_count("dgpqsxgtqsigqqsngrqsegpvsdgfqqsgsqsdgk").unwrap();
 /// assert_eq!(count, 15);
 /// ```
 #[inline]
-pub fn bets_hash_to_bets_count(bets_hash: &str) -> usize {
-    bets_hash_regex_check(bets_hash);
-    bets_hash_to_bet_indices(bets_hash).len()
+pub fn bets_hash_to_bets_count(bets_hash: &str) -> Result<usize, String> {
+    bets_hash_regex_check(bets_hash)?;
+    Ok(bets_hash_to_bet_indices(bets_hash)?.len())
 }
 
 /// Returns the hash of the given bet amounts.
@@ -209,23 +212,26 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
 /// Each element in the resulting vector is an Option, where None means that the bet amount is invalid.
 /// "Invalid" here means below 1.
 /// ```
-/// let amounts = neofoodclub::math::amounts_hash_to_bet_amounts("AaYAbWAcUAdSAeQ");
+/// let amounts = neofoodclub::math::amounts_hash_to_bet_amounts("AaYAbWAcUAdSAeQ").unwrap();
 /// assert_eq!(amounts, vec![Some(50), Some(100), Some(150), Some(200), Some(250)]);
-/// let amounts = neofoodclub::math::amounts_hash_to_bet_amounts("EmxCoKCoKCglDKUCYqEXkByWBpqzGO");
+/// let amounts = neofoodclub::math::amounts_hash_to_bet_amounts("EmxCoKCoKCglDKUCYqEXkByWBpqzGO").unwrap();
 /// assert_eq!(amounts, vec![Some(11463), Some(6172), Some(6172), Some(5731), Some(10030), Some(8024), Some(13374), Some(4000), Some(3500), None]);
 /// ```
 #[inline]
-pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
+pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>>, String> {
     // check that the hash matches regex "^[a-zA-Z]*$" using regex
     let valid_hash_regex =
         VALID_AMOUNT_HASH_REGEX.get_or_init(|| regex::Regex::new("^[a-zA-Z]*$").unwrap());
 
     // Check that the hash matches the regex
     if !valid_hash_regex.is_match(amounts_hash) {
-        panic!("Invalid hash");
+        return Err(format!(
+            "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
+            amounts_hash
+        ));
     }
 
-    amounts_hash
+    Ok(amounts_hash
         .as_bytes()
         .chunks(3)
         .map(|chunk| {
@@ -244,27 +250,27 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Vec<Option<u32>> {
             let value = value.saturating_sub(BET_AMOUNT_MAX);
             Some(value).filter(|&v| v >= BET_AMOUNT_MIN)
         })
-        .collect()
+        .collect())
 }
 
 /// Returns the bet binaries from a given bet hash.
 /// ```
-/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("faa");
+/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("faa").unwrap();
 /// assert_eq!(bins, vec![0x80000]);
 ///
-/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("faafaafaafaafaafaa");
+/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("faafaafaafaafaafaa").unwrap();
 /// assert_eq!(bins, vec![0x80000, 0x8000, 0x800, 0x80, 0x8, 0x80000]);
 ///
-/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("ltqvqwgimhqtvrnywrwvijwnn");
+/// let bins = neofoodclub::math::bets_hash_to_bet_binaries("ltqvqwgimhqtvrnywrwvijwnn").unwrap();
 /// assert_eq!(bins, vec![0x48212, 0x81828, 0x14888, 0x24484, 0x28211, 0x82442, 0x11142, 0x41418, 0x82811, 0x44242]);
 ///```
 #[inline]
-pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Vec<u32> {
-    bets_hash_regex_check(bets_hash);
-    bets_hash_to_bet_indices(bets_hash)
+pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Result<Vec<u32>, String> {
+    bets_hash_regex_check(bets_hash)?;
+    Ok(bets_hash_to_bet_indices(bets_hash)?
         .iter()
         .map(|&indices| pirates_binary(indices))
-        .collect()
+        .collect())
 }
 
 /// Returns the hash value from a given bet indices.
