@@ -1120,7 +1120,8 @@ mod tests {
             ModifierFlags::EMPTY.bits(),
             Some(custom_odds.clone()),
             NaiveTime::from_hms_opt(12, 0, 0),
-        ).unwrap();
+        )
+        .unwrap();
 
         let modified_nfc = nfc.copy(None, Some(modifier));
 
@@ -1272,8 +1273,9 @@ mod tests {
 
     #[test]
     fn test_bets_stats_table_reverse_mer() {
-        let nfc =
-            make_test_nfc_with_modifier(Modifier::new(ModifierFlags::REVERSE.bits(), None, None).unwrap());
+        let nfc = make_test_nfc_with_modifier(
+            Modifier::new(ModifierFlags::REVERSE.bits(), None, None).unwrap(),
+        );
 
         let bets = nfc.make_max_ter_bets();
 
@@ -1588,7 +1590,8 @@ mod tests {
             ModifierFlags::OPENING_ODDS.bits(),
             Some(custom_odds.clone()),
             None,
-        ).unwrap();
+        )
+        .unwrap();
 
         nfc.with_modifier(another_modifier.clone());
 
@@ -1602,7 +1605,8 @@ mod tests {
             ModifierFlags::EMPTY.bits(),
             Some(custom_odds),
             Some(NaiveTime::from_hms_opt(12, 0, 0).unwrap()),
-        ).unwrap();
+        )
+        .unwrap();
 
         nfc.with_modifier(another_another_modifier.clone());
 
@@ -1638,11 +1642,8 @@ mod tests {
 
         let mer = nfc.make_max_ter_bets();
 
-        let opening_odds_nfc = nfc.with_modifier(Modifier::new(
-            ModifierFlags::OPENING_ODDS.bits(),
-            None,
-            None,
-        ).unwrap());
+        let opening_odds_nfc = nfc
+            .with_modifier(Modifier::new(ModifierFlags::OPENING_ODDS.bits(), None, None).unwrap());
 
         let omer = opening_odds_nfc.make_max_ter_bets();
 
