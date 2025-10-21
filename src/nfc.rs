@@ -189,7 +189,8 @@ impl NeoFoodClub {
                 },
             use_modifier.custom_odds,
             use_modifier.custom_time,
-        );
+        )
+        .expect("Invalid modifier parameters");
 
         let temp: RoundDataRaw = serde_qs::from_str(parts[1]).expect("Invalid query string.");
 
@@ -493,7 +494,7 @@ impl NeoFoodClub {
     /// Creates a Bets object that consists of all bets.
     /// This is mostly for debugging purposes.
     pub fn make_all_bets(&self) -> Bets {
-        Bets::new(self, (0..3124).collect_vec(), None)
+        Bets::new(self, (0..3124).collect_vec())
     }
 
     /// Creates a Bets object that consists of all max-TER bets.
@@ -501,7 +502,7 @@ impl NeoFoodClub {
     pub fn make_all_max_ter_bets(&self) -> Bets {
         let indices = self.max_ter_indices();
 
-        let mut bets = Bets::new(self, indices.to_vec(), None);
+        let mut bets = Bets::new(self, indices.to_vec());
         bets.fill_bet_amounts(self);
         bets
     }
@@ -526,7 +527,7 @@ impl NeoFoodClub {
             return None;
         }
 
-        let mut bets = Bets::new(self, units_indices, None);
+        let mut bets = Bets::new(self, units_indices);
 
         bets.fill_bet_amounts(self);
 
@@ -541,7 +542,7 @@ impl NeoFoodClub {
         let chosen_values: Vec<usize> =
             (0..3124).choose_multiple(&mut rng, self.max_amount_of_bets());
 
-        let mut bets = Bets::new(self, chosen_values, None);
+        let mut bets = Bets::new(self, chosen_values);
         bets.fill_bet_amounts(self);
         bets
     }
@@ -555,7 +556,7 @@ impl NeoFoodClub {
             .cloned()
             .collect();
 
-        let mut bets = Bets::new(self, indices, None);
+        let mut bets = Bets::new(self, indices);
         bets.fill_bet_amounts(self);
         bets
     }
@@ -577,7 +578,7 @@ impl NeoFoodClub {
             .take(self.max_amount_of_bets())
             .collect();
 
-        let mut bets = Bets::new(self, indices, None);
+        let mut bets = Bets::new(self, indices);
         bets.fill_bet_amounts(self);
         bets
     }
@@ -752,12 +753,12 @@ impl NeoFoodClub {
     }
 
     /// Creates a Bets object translated from a bets hash.
-    pub fn make_bets_from_hash(&self, hash: &str) -> Bets {
-        let mut bets = Bets::from_hash(self, hash);
+    pub fn make_bets_from_hash(&self, hash: &str) -> Result<Bets, String> {
+        let mut bets = Bets::from_hash(self, hash)?;
 
         bets.fill_bet_amounts(self);
 
-        bets
+        Ok(bets)
     }
 
     /// Creates a Bets object translated from a bets binary vector.

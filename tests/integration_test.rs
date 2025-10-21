@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn test_max_amount_of_bets_10() {
         let mut nfc = make_test_nfc();
-        let new_modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, None);
+        let new_modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, None).unwrap();
 
         nfc.modifier = new_modifier;
 
@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn test_max_amount_of_bets_15() {
         let mut nfc = make_test_nfc();
-        let new_modifier = Modifier::new(ModifierFlags::CHARITY_CORNER.bits(), None, None);
+        let new_modifier = Modifier::new(ModifierFlags::CHARITY_CORNER.bits(), None, None).unwrap();
 
         nfc.modifier = new_modifier;
 
@@ -105,7 +105,7 @@ mod tests {
 
         let bets_hash = bets.bets_hash();
 
-        let mut binaries = math::bets_hash_to_bet_binaries(&bets_hash);
+        let mut binaries = math::bets_hash_to_bet_binaries(&bets_hash).unwrap();
         binaries.sort_unstable();
 
         let expected = [4096, 8192, 16400, 16416, 16448, 16512, 32768];
@@ -120,7 +120,7 @@ mod tests {
 
         let amounts_hash = bets.amounts_hash();
 
-        let mut bet_amounts = math::amounts_hash_to_bet_amounts(&amounts_hash.unwrap());
+        let mut bet_amounts = math::amounts_hash_to_bet_amounts(&amounts_hash.unwrap()).unwrap();
 
         bet_amounts.sort_unstable();
 
@@ -158,14 +158,14 @@ mod tests {
         assert_eq!(b, "b");
         assert_eq!(a, "a");
 
-        let mut binaries = math::bets_hash_to_bet_binaries(bets_hash);
+        let mut binaries = math::bets_hash_to_bet_binaries(bets_hash).unwrap();
         binaries.sort_unstable();
 
         let expected_binaries = [4096, 8192, 16400, 16416, 16448, 16512, 32768];
 
         assert_eq!(binaries, expected_binaries);
 
-        let mut bet_amounts = math::amounts_hash_to_bet_amounts(amounts_hash);
+        let mut bet_amounts = math::amounts_hash_to_bet_amounts(amounts_hash).unwrap();
 
         bet_amounts.sort_unstable();
 
@@ -212,7 +212,9 @@ mod tests {
     #[test]
     fn test_get_win_np_from_url() {
         let nfc = make_test_nfc_from_url();
-        let bets = nfc.make_bets_from_hash("aukacfukycuulacauutcbukdc");
+        let bets = nfc
+            .make_bets_from_hash("aukacfukycuulacauutcbukdc")
+            .unwrap();
 
         assert_eq!(nfc.get_win_np(&bets), 192_000);
     }
@@ -326,7 +328,7 @@ mod tests {
             let amounts = vec![Some(amount); 10];
             let hash = math::bet_amounts_to_amounts_hash(&amounts);
             assert_eq!(
-                math::amounts_hash_to_bet_amounts(&hash),
+                math::amounts_hash_to_bet_amounts(&hash).unwrap(),
                 vec![Some(amount); 10]
             );
         });
@@ -337,7 +339,10 @@ mod tests {
         // amount too low, returns None
         let amounts = vec![Some(BET_AMOUNT_MIN - 1); 10];
         let hash = math::bet_amounts_to_amounts_hash(&amounts);
-        assert_eq!(math::amounts_hash_to_bet_amounts(&hash), vec![None; 10]);
+        assert_eq!(
+            math::amounts_hash_to_bet_amounts(&hash).unwrap(),
+            vec![None; 10]
+        );
     }
 
     #[test]
@@ -353,7 +358,7 @@ mod tests {
 
         let nfc = make_test_nfc();
 
-        let bets = nfc.make_bets_from_hash(crazy_hash);
+        let bets = nfc.make_bets_from_hash(crazy_hash).unwrap();
 
         assert_eq!(bets.bets_hash(), crazy_hash);
     }
@@ -556,7 +561,7 @@ mod tests {
     #[test]
     fn test_bets_hash_to_bets_count() {
         let bets_hash = "aukacfukycuulacauutcbukdc";
-        let bets = math::bets_hash_to_bets_count(bets_hash);
+        let bets = math::bets_hash_to_bets_count(bets_hash).unwrap();
 
         assert_eq!(bets, 10);
     }
@@ -745,8 +750,8 @@ mod tests {
         let nfc = make_test_nfc();
         let mut bets = nfc.make_max_ter_bets();
 
-        let amounts = neofoodclub::bets::BetAmounts::from_amount(8000, bets.len());
-        bets.set_bet_amounts(&Some(amounts));
+        let amounts = neofoodclub::bets::BetAmounts::from_amount(8000);
+        bets.set_bet_amounts(&Some(amounts)).unwrap();
 
         assert_eq!(bets.bet_amounts, Some(vec![Some(8000); 10]));
     }
@@ -756,17 +761,18 @@ mod tests {
         let nfc = make_test_nfc();
         let mut bets = nfc.make_max_ter_bets();
 
-        let amounts = neofoodclub::bets::BetAmounts::from_amount(0, bets.len());
-        bets.set_bet_amounts(&Some(amounts));
+        let amounts = neofoodclub::bets::BetAmounts::from_amount(0);
+        bets.set_bet_amounts(&Some(amounts)).unwrap();
 
         assert_eq!(bets.bet_amounts, None);
     }
 
     #[test]
     fn test_bets_set_bet_amounts_zero_length() {
+        // from_amount now returns AllSame regardless of length
         assert_eq!(
-            neofoodclub::bets::BetAmounts::from_amount(8000, 0),
-            BetAmounts::None
+            neofoodclub::bets::BetAmounts::from_amount(8000),
+            BetAmounts::AllSame(8000)
         );
     }
 
@@ -774,8 +780,9 @@ mod tests {
     fn test_betamounts_to_vec_with_hash() {
         let amounts =
             neofoodclub::bets::BetAmounts::AmountHash("EmxCoKCoKCglDKUCYqEXkByWBpqzGO".to_owned());
+        // Hash decodes to 9 amounts, so we need to pass 9 as the length
         assert_eq!(
-            amounts.to_vec(),
+            amounts.to_vec(9).unwrap(),
             Some(vec![
                 Some(11463),
                 Some(6172),
@@ -791,15 +798,17 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_amounts_hash_to_bet_amounts_invalid() {
-        math::amounts_hash_to_bet_amounts("🎲");
+        let result = math::amounts_hash_to_bet_amounts("🎲");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid amounts hash"));
     }
 
     #[test]
-    #[should_panic]
     fn test_bets_hash_to_bets_count_invalid() {
-        math::bets_hash_to_bets_count("🎲");
+        let result = math::bets_hash_to_bets_count("🎲");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid bet hash"));
     }
 
     #[test]
@@ -807,7 +816,7 @@ mod tests {
         let nfc = make_test_nfc();
         let bets = nfc.make_bets_from_binaries(vec![0x80000, 0x8000, 0x800, 0x80, 0x8, 0x80000]);
 
-        assert_eq!(bets.len(), 5);
+        assert_eq!(bets.len(), 6);
     }
 
     #[test]
@@ -830,7 +839,7 @@ mod tests {
     fn test_max_ter_reverse() {
         let mut nfc = make_test_nfc_from_url();
 
-        nfc.modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None, None);
+        nfc.modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None, None).unwrap();
         let bets = nfc.make_max_ter_bets();
 
         assert_eq!(
@@ -930,7 +939,7 @@ mod tests {
             custom_odds.insert(id, 13);
         }
 
-        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None);
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None).unwrap();
         let nfc = make_test_nfc_with_modifier(modifier);
 
         assert_eq!(
@@ -951,7 +960,7 @@ mod tests {
 
         let time = NaiveTime::parse_from_str("12:00:00", "%H:%M:%S").unwrap();
 
-        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time));
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time)).unwrap();
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
@@ -966,7 +975,7 @@ mod tests {
     fn test_modifier_custom_time_expect_no_changes() {
         let time = NaiveTime::parse_from_str("16:15:00", "%H:%M:%S").unwrap();
 
-        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time));
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time)).unwrap();
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
@@ -977,7 +986,7 @@ mod tests {
     fn test_modifier_custom_time_expect_4_changes() {
         let time = NaiveTime::parse_from_str("18:00:00", "%H:%M:%S").unwrap();
 
-        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time));
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time)).unwrap();
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
@@ -988,7 +997,7 @@ mod tests {
     fn test_modifier_custom_time_expect_14_changes() {
         let time = NaiveTime::parse_from_str("12:20:00", "%H:%M:%S").unwrap();
 
-        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time));
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time)).unwrap();
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
@@ -1111,7 +1120,7 @@ mod tests {
             ModifierFlags::EMPTY.bits(),
             Some(custom_odds.clone()),
             NaiveTime::from_hms_opt(12, 0, 0),
-        );
+        ).unwrap();
 
         let modified_nfc = nfc.copy(None, Some(modifier));
 
@@ -1139,7 +1148,7 @@ mod tests {
         let mut custom_odds = HashMap::<u8, u8>::new();
         custom_odds.insert(1, 13);
 
-        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None);
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None).unwrap();
 
         let new_modifier = modifier.copy();
 
@@ -1264,7 +1273,7 @@ mod tests {
     #[test]
     fn test_bets_stats_table_reverse_mer() {
         let nfc =
-            make_test_nfc_with_modifier(Modifier::new(ModifierFlags::REVERSE.bits(), None, None));
+            make_test_nfc_with_modifier(Modifier::new(ModifierFlags::REVERSE.bits(), None, None).unwrap());
 
         let bets = nfc.make_max_ter_bets();
 
@@ -1319,12 +1328,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn test_set_bet_amounts_panic() {
+    fn test_set_bet_amounts_error() {
         let nfc = make_test_nfc();
 
         let mut bets = nfc.make_max_ter_bets();
-        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![None; 1])));
+        let result = bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![None; 1])));
+
+        assert!(result.is_err());
     }
 
     #[test]
@@ -1340,7 +1350,8 @@ mod tests {
             None,
             None,
             Some(1000),
-        ])));
+        ])))
+        .unwrap();
 
         assert!(!bets.is_guaranteed_win(&nfc));
     }
@@ -1350,7 +1361,8 @@ mod tests {
         let nfc = make_test_nfc();
 
         let mut bets = nfc.make_max_ter_bets();
-        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![Some(0); 10])));
+        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![Some(0); 10])))
+            .unwrap();
 
         assert!(!bets.is_guaranteed_win(&nfc));
     }
@@ -1396,26 +1408,28 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_modifier_new_panic_pirate_id() {
         let mut custom_odds = HashMap::<u8, u8>::new();
         custom_odds.insert(21, 13);
 
-        let _modifier = Modifier::new(ModifierFlags::empty().bits(), Some(custom_odds), None);
+        let result = Modifier::new(ModifierFlags::empty().bits(), Some(custom_odds), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid pirate ID"));
     }
 
     #[test]
-    #[should_panic]
     fn test_modifier_new_panic_odds() {
         let mut custom_odds = HashMap::<u8, u8>::new();
         custom_odds.insert(1, 14);
 
-        let _modifier = Modifier::new(ModifierFlags::empty().bits(), Some(custom_odds), None);
+        let result = Modifier::new(ModifierFlags::empty().bits(), Some(custom_odds), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid odds"));
     }
 
     #[test]
     fn test_modifier_opening_odds() {
-        let modifier = Modifier::new(ModifierFlags::OPENING_ODDS.bits(), None, None);
+        let modifier = Modifier::new(ModifierFlags::OPENING_ODDS.bits(), None, None).unwrap();
 
         let nfc = make_test_nfc_with_modifier(modifier);
 
@@ -1457,7 +1471,8 @@ mod tests {
         let nfc = NeoFoodClub::from_url(ROUND_DATA_URL_NO_WINNERS, None, None, None);
 
         let mut bets = nfc.make_bets_from_binaries(vec![0x1]);
-        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![Some(8000); 1])));
+        bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![Some(8000); 1])))
+            .unwrap();
 
         assert!(nfc.winning_pirates().is_none());
         assert_eq!(nfc.winners(), [0; 5]);
@@ -1514,7 +1529,7 @@ mod tests {
             custom_odds
         };
 
-        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None);
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None).unwrap();
 
         let nfc = make_test_nfc_from_url_with_modifier(modifier);
 
@@ -1539,7 +1554,7 @@ mod tests {
             custom_odds
         };
 
-        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None);
+        let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None).unwrap();
 
         let nfc = make_test_nfc_from_url_with_modifier(modifier);
 
@@ -1561,7 +1576,7 @@ mod tests {
 
         assert!(nfc.modifier.is_empty());
 
-        let modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None, None);
+        let modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None, None).unwrap();
 
         nfc.with_modifier(modifier);
 
@@ -1573,7 +1588,7 @@ mod tests {
             ModifierFlags::OPENING_ODDS.bits(),
             Some(custom_odds.clone()),
             None,
-        );
+        ).unwrap();
 
         nfc.with_modifier(another_modifier.clone());
 
@@ -1587,7 +1602,7 @@ mod tests {
             ModifierFlags::EMPTY.bits(),
             Some(custom_odds),
             Some(NaiveTime::from_hms_opt(12, 0, 0).unwrap()),
-        );
+        ).unwrap();
 
         nfc.with_modifier(another_another_modifier.clone());
 
@@ -1607,10 +1622,10 @@ mod tests {
 
         let mer = nfc.make_max_ter_bets();
         let gmer = nfc
-            .with_modifier(Modifier::new(ModifierFlags::GENERAL.bits(), None, None))
+            .with_modifier(Modifier::new(ModifierFlags::GENERAL.bits(), None, None).unwrap())
             .make_max_ter_bets();
         let reset_mer = nfc
-            .with_modifier(Modifier::new(ModifierFlags::EMPTY.bits(), None, None))
+            .with_modifier(Modifier::new(ModifierFlags::EMPTY.bits(), None, None).unwrap())
             .make_max_ter_bets();
 
         assert_ne!(mer.get_binaries(), gmer.get_binaries());
@@ -1627,12 +1642,12 @@ mod tests {
             ModifierFlags::OPENING_ODDS.bits(),
             None,
             None,
-        ));
+        ).unwrap());
 
         let omer = opening_odds_nfc.make_max_ter_bets();
 
         let reset_mer = nfc
-            .with_modifier(Modifier::new(ModifierFlags::EMPTY.bits(), None, None))
+            .with_modifier(Modifier::new(ModifierFlags::EMPTY.bits(), None, None).unwrap())
             .make_max_ter_bets();
 
         assert_ne!(mer.get_binaries(), omer.get_binaries());
@@ -1705,56 +1720,103 @@ mod panic_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid pirate ID, need 1-20, got 21")]
     fn test_modifier_new_panic_pirate_id_gt() {
         let mut custom_odds = HashMap::new();
         custom_odds.insert(21, 2);
-        Modifier::new(0, Some(custom_odds), None);
+        let result = Modifier::new(0, Some(custom_odds), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid pirate ID"));
     }
 
     #[test]
-    #[should_panic(expected = "Invalid pirate ID, need 1-20, got 0")]
     fn test_modifier_new_panic_pirate_id_lt() {
         let mut custom_odds = HashMap::new();
         custom_odds.insert(0, 2);
-        Modifier::new(0, Some(custom_odds), None);
+        let result = Modifier::new(0, Some(custom_odds), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid pirate ID"));
     }
 
     #[test]
-    #[should_panic(expected = "Invalid odds, need 2-13, got 14")]
     fn test_modifier_new_panic_odds_gt() {
         let mut custom_odds = HashMap::new();
         custom_odds.insert(1, 14);
-        Modifier::new(0, Some(custom_odds), None);
+        let result = Modifier::new(0, Some(custom_odds), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid odds"));
     }
 
     #[test]
-    #[should_panic(expected = "Invalid odds, need 2-13, got 1")]
     fn test_modifier_new_panic_odds_lt() {
         let mut custom_odds = HashMap::new();
         custom_odds.insert(1, 1);
-        Modifier::new(0, Some(custom_odds), None);
+        let result = Modifier::new(0, Some(custom_odds), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid odds"));
     }
 
     #[test]
-    #[should_panic(expected = "Bet amounts must be the same length as bet indices, or None.")]
-    fn test_set_bet_amounts_panic_len() {
+    fn test_set_bet_amounts_error_len() {
         let nfc = make_test_nfc();
         let mut bets = nfc.make_crazy_bets();
-        let amounts = BetAmounts::from_amount(100, 5);
-        bets.set_bet_amounts(&Some(amounts));
+        // AllSame never causes an error, so use Amounts instead
+        let amounts = BetAmounts::Amounts(vec![Some(100); 5]);
+        let result = bets.set_bet_amounts(&Some(amounts));
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("Bet amounts must be the same length as bet indices, or None."));
     }
 
     #[test]
-    #[should_panic(expected = "Invalid bet hash")]
+    fn test_set_bet_amounts_allsame_never_errors() {
+        let nfc = make_test_nfc();
+        let mut bets = nfc.make_crazy_bets();
+        // AllSame should never cause an error, regardless of bet count
+        let amounts = BetAmounts::AllSame(5000);
+        let result = bets.set_bet_amounts(&Some(amounts));
+
+        assert!(result.is_ok());
+        assert_eq!(bets.bet_amounts, Some(vec![Some(5000); bets.len()]));
+    }
+
+    #[test]
+    fn test_bets_new_with_amount() {
+        let nfc = make_test_nfc();
+        let indices: Vec<usize> = (0..10).collect();
+
+        // new_with_amount should never return an error
+        let bets = neofoodclub::bets::Bets::new_with_amount(&nfc, indices.clone(), Some(7500));
+
+        assert_eq!(bets.len(), 10);
+        assert_eq!(bets.bet_amounts, Some(vec![Some(7500); 10]));
+    }
+
+    #[test]
+    fn test_bets_new_with_amount_none() {
+        let nfc = make_test_nfc();
+        let indices: Vec<usize> = (0..10).collect();
+
+        // new_with_amount with None should create bets with no amounts
+        let bets = neofoodclub::bets::Bets::new_with_amount(&nfc, indices.clone(), None);
+
+        assert_eq!(bets.len(), 10);
+        assert_eq!(bets.bet_amounts, None);
+    }
+
+    #[test]
     fn test_bets_hash_to_bet_indices_invalid() {
-        neofoodclub::math::bets_hash_to_bet_indices("z");
+        let result = neofoodclub::math::bets_hash_to_bet_indices("z");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid bet hash"));
     }
 
     #[test]
-    #[should_panic(expected = "Invalid hash")]
     fn test_amounts_hash_to_bet_amounts_invalid() {
-        neofoodclub::math::amounts_hash_to_bet_amounts("!");
+        let result = neofoodclub::math::amounts_hash_to_bet_amounts("!");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid amounts hash"));
     }
 
     #[test]
@@ -1779,7 +1841,7 @@ mod panic_tests {
     #[should_panic(expected = "Pirates binary must have 5 pirates.")]
     fn test_make_gambit_bets_panic() {
         let nfc = make_test_nfc();
-        nfc.make_gambit_bets(0b1);
+        let _ = nfc.make_gambit_bets(0b1);
     }
 
     #[test]

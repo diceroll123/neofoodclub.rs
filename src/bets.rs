@@ -1,5 +1,4 @@
 use comfy_table::Table;
-use itertools::Itertools;
 
 use crate::{
     arena::ARENA_NAMES,
@@ -15,35 +14,47 @@ use crate::{
 /// A representation of a set of bet amounts
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BetAmounts {
+    /// A hash representing variable bet amounts
     AmountHash(String),
+    /// A vector of variable bet amounts (can cause errors if length mismatches)
     Amounts(Vec<Option<u32>>),
+    /// A single amount applied to all bets (never causes length mismatch errors)
+    AllSame(u32),
+    /// No bet amounts
     None,
 }
 
 impl BetAmounts {
     /// Returns the bet amounts as a vector of Option<u32>
     /// If the BetAmounts is None, returns None
-    pub fn to_vec(&self) -> Option<Vec<Option<u32>>> {
+    /// For AllSame, this requires the length parameter
+    pub fn to_vec(&self, length: usize) -> Result<Option<Vec<Option<u32>>>, String> {
         match self {
             BetAmounts::AmountHash(hash) => {
-                Some(Self::clean_amounts(&amounts_hash_to_bet_amounts(hash)))
+                let amounts = amounts_hash_to_bet_amounts(hash)?;
+                Ok(Some(Self::clean_amounts(&amounts)))
             }
-            BetAmounts::Amounts(amounts) => Some(Self::clean_amounts(amounts)),
-            BetAmounts::None => None,
+            BetAmounts::Amounts(amounts) => Ok(Some(Self::clean_amounts(amounts))),
+            BetAmounts::AllSame(amount) => {
+                if length == 0 {
+                    Ok(None)
+                } else {
+                    let clamped = (*amount).clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX);
+                    Ok(Some(vec![Some(clamped); length]))
+                }
+            }
+            BetAmounts::None => Ok(None),
         }
     }
 
-    /// Creates a new BetAmounts from a length and bet amount
-    pub fn from_amount(amount: u32, length: usize) -> Self {
-        if length == 0 {
-            return BetAmounts::None;
-        }
-
+    /// Creates a new BetAmounts from a single bet amount
+    /// This creates an AllSame variant which can never cause length mismatch errors
+    pub fn from_amount(amount: u32) -> Self {
         if !(BET_AMOUNT_MIN..=BET_AMOUNT_MAX).contains(&amount) {
             return BetAmounts::None;
         }
 
-        BetAmounts::Amounts(vec![Some(amount); length])
+        BetAmounts::AllSame(amount)
     }
 
     /// Creates a new BetAmounts from a vector of optional bet amounts
@@ -66,8 +77,8 @@ pub struct Bets {
 }
 
 impl Bets {
-    /// Creates a new Bets struct from a list of indices mapped to the RoundDictData of the NFC object
-    pub fn new(nfc: &NeoFoodClub, indices: Vec<usize>, amounts: Option<BetAmounts>) -> Self {
+    /// Creates a new Bets struct from a list of indices (without bet amounts)
+    pub fn new(nfc: &NeoFoodClub, indices: Vec<usize>) -> Self {
         let bet_binaries = indices
             .iter()
             .map(|&i| nfc.round_dict_data().bins[i])
@@ -75,32 +86,59 @@ impl Bets {
 
         let odds = Odds::new(nfc, &indices);
 
-        let mut bets = Self {
+        Self {
             array_indices: indices,
             bet_binaries,
             bet_amounts: None,
             odds,
-        };
+        }
+    }
 
-        bets.set_bet_amounts(&amounts);
+    /// Creates a new Bets struct with bet amounts that may fail if lengths don't match
+    pub fn try_new(
+        nfc: &NeoFoodClub,
+        indices: Vec<usize>,
+        amounts: BetAmounts,
+    ) -> Result<Self, String> {
+        let mut bets = Self::new(nfc, indices);
+        bets.set_bet_amounts(&Some(amounts))?;
+        Ok(bets)
+    }
+
+    /// Creates a new Bets struct with a single bet amount for all bets (infallible)
+    /// This is a simpler API when you want the same amount for all bets
+    pub fn new_with_amount(nfc: &NeoFoodClub, indices: Vec<usize>, amount: Option<u32>) -> Self {
+        let mut bets = Self::new(nfc, indices);
+
+        if let Some(amt) = amount {
+            bets.set_bet_amount_all_same(amt);
+        }
 
         bets
     }
 
     /// Sets the bet amounts for the bets
-    pub fn set_bet_amounts(&mut self, amounts: &Option<BetAmounts>) {
+    /// Returns an error if the amounts length doesn't match the bet count
+    /// (except for AllSame which always works)
+    pub fn set_bet_amounts(&mut self, amounts: &Option<BetAmounts>) -> Result<(), String> {
         let Some(betamount) = amounts else {
             self.bet_amounts = None;
-            return;
+            return Ok(());
         };
 
-        let Some(amounts) = betamount.to_vec() else {
+        let Some(amounts) = betamount.to_vec(self.array_indices.len())? else {
             self.bet_amounts = None;
-            return;
+            return Ok(());
         };
 
-        if amounts.len() != self.array_indices.len() {
-            panic!("Bet amounts must be the same length as bet indices, or None. Provided: {} Expected {}", amounts.len(), self.array_indices.len());
+        // For AllSame variant, length always matches due to to_vec implementation
+        // For other variants, check length
+        if !matches!(betamount, BetAmounts::AllSame(_)) && amounts.len() != self.array_indices.len()
+        {
+            return Err(format!(
+                "Bet amounts must be the same length as bet indices, or None. Provided: {} Expected: {}",
+                amounts.len(), self.array_indices.len()
+            ));
         }
 
         self.bet_amounts = Some(
@@ -109,6 +147,20 @@ impl Bets {
                 .map(|x| x.map(|x| x.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX)))
                 .collect(),
         );
+
+        Ok(())
+    }
+
+    /// Sets the bet amounts for the bets (infallible version for AllSame)
+    /// This is a convenience method that never returns an error
+    fn set_bet_amount_all_same(&mut self, amount: u32) {
+        if self.array_indices.is_empty() {
+            self.bet_amounts = None;
+            return;
+        }
+
+        let clamped = amount.clamp(BET_AMOUNT_MIN, BET_AMOUNT_MAX);
+        self.bet_amounts = Some(vec![Some(clamped); self.array_indices.len()]);
     }
 
     /// Returns the net expected value of each bet
@@ -172,20 +224,19 @@ impl Bets {
     /// Creates a new Bets struct from a list of binaries
     pub fn from_binaries(nfc: &NeoFoodClub, binaries: Vec<u32>) -> Self {
         // maintaining the order of the binaries is important, at the cost of some performance
-        let unique_bin_indices: Vec<usize> = binaries
+        let bin_indices: Vec<usize> = binaries
             .iter()
             .filter_map(|b| nfc.round_dict_data().bins.iter().position(|bin| bin == b))
-            .unique()
             .collect();
 
-        Self::new(nfc, unique_bin_indices, None)
+        Self::new(nfc, bin_indices)
     }
 
     /// Creates a new Bets struct from a hash
-    pub fn from_hash(nfc: &NeoFoodClub, hash: &str) -> Self {
-        let binaries = bets_hash_to_bet_binaries(hash);
+    pub fn from_hash(nfc: &NeoFoodClub, hash: &str) -> Result<Self, String> {
+        let binaries = bets_hash_to_bet_binaries(hash)?;
 
-        Self::from_binaries(nfc, binaries)
+        Ok(Self::from_binaries(nfc, binaries))
     }
 
     /// Creates a new Bets struct from pirate indices
