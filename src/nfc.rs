@@ -401,8 +401,10 @@ impl NeoFoodClub {
     pub fn max_ters(&self) -> &Vec<f64> {
         let general = self.modifier.is_general();
 
-        if !general && self.bet_amount.is_some() {
-            let bet_amount = self.bet_amount.unwrap();
+        if let Some(bet_amount) = self.bet_amount {
+            if general {
+                return &self.round_dict_data().ers;
+            }
 
             // if there's a bet amount, we use Net Expected instead of Expected Return
             let maxbets: &Vec<u32> = self.clamped_max_bets.get_or_init(|| {
@@ -967,8 +969,7 @@ fn validate_round_data(round_data: &RoundData) {
         }
     }
 
-    if round_data.foods.is_some() {
-        let foods = round_data.foods.as_ref().unwrap();
+    if let Some(foods) = &round_data.foods {
         for arena in foods.iter() {
             for food in arena.iter() {
                 if *food < 1 || *food > 40 {
@@ -978,9 +979,7 @@ fn validate_round_data(round_data: &RoundData) {
         }
     }
 
-    if round_data.winners.is_some() {
-        let winners = round_data.winners.as_ref().unwrap();
-
+    if let Some(winners) = &round_data.winners {
         // the winners have to either be all 0, or all 1-4, let's check both
         let all_zero = winners.iter().all(|&x| x == 0);
         let all_one_to_four = winners.iter().all(|&x| (1..=4).contains(&x));
