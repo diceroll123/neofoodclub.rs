@@ -514,12 +514,13 @@ impl NeoFoodClub {
     pub fn make_units_bets(&self, units: u32) -> Option<Bets> {
         let sorted_probs = self.get_sorted_probs_indices(true, 3124);
 
-        let mut units_indices = Vec::<usize>::with_capacity(self.max_amount_of_bets());
+        let count = self.max_amount_of_bets();
+        let mut units_indices = Vec::<usize>::with_capacity(count);
 
         for index in sorted_probs.iter() {
             if self.round_dict_data().odds[*index] >= units {
                 units_indices.push(*index);
-                if units_indices.len() == units_indices.capacity() {
+                if units_indices.len() == count {
                     break;
                 }
             }
@@ -613,9 +614,10 @@ impl NeoFoodClub {
     /// Crazy bets consist of randomly-selected, full-arena bets.
     /// Following these bets is not recommended.
     pub fn make_crazy_bets(&self) -> Bets {
-        let mut binaries: HashSet<u32> = HashSet::with_capacity(self.max_amount_of_bets());
+        let count = self.max_amount_of_bets();
+        let mut binaries: HashSet<u32> = HashSet::with_capacity(count);
 
-        while binaries.len() < binaries.capacity() {
+        while binaries.len() < count {
             binaries.insert(random_full_pirates_binary());
         }
 
