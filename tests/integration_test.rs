@@ -805,6 +805,14 @@ mod tests {
     }
 
     #[test]
+    fn test_amounts_hash_to_bet_amounts_invalid_length() {
+        // Valid charset, invalid length (must be a multiple of 3)
+        let result = math::amounts_hash_to_bet_amounts("a");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid amounts hash"));
+    }
+
+    #[test]
     fn test_bets_hash_to_bets_count_invalid() {
         let result = math::bets_hash_to_bets_count("🎲");
         assert!(result.is_err());
