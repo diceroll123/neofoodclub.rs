@@ -21,6 +21,16 @@ const PIR_IB: [u32; 4] = [0x88888, 0x44444, 0x22222, 0x11111];
 // 0xFFFFF = 0b11111111111111111111 (20 '1's), will accept all pirates
 const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
 
+// Precomputed `pirate_binary(index, arena)` for arena=0..4, index=0..4.
+// This avoids shifts/matches in hot loops.
+const PIRATE_BIN: [[u32; 5]; 5] = [
+    [0, 0x80000, 0x40000, 0x20000, 0x10000],
+    [0, 0x8000, 0x4000, 0x2000, 0x1000],
+    [0, 0x800, 0x400, 0x200, 0x100],
+    [0, 0x80, 0x40, 0x20, 0x10],
+    [0, 0x8, 0x4, 0x2, 0x1],
+];
+
 /// ```
 /// let bin = neofoodclub::math::pirate_binary(3, 2);
 /// assert_eq!(bin, 0x200);
@@ -424,32 +434,33 @@ pub struct RoundDictData {
     pub maxbets: Box<[u32; 3124]>,
 }
 
-/// Precomputed data for all 3124 index combinations: (indices as usize, binary)
-static ROUND_DATA: OnceLock<[([usize; 5], u32); 3124]> = OnceLock::new();
+const fn build_round_data() -> [([usize; 5], u32); 3124] {
+    let mut result = [([0usize; 5], 0u32); 3124];
+    let mut i: u16 = 1;
+    while i < 3125 {
+        let idx = (i - 1) as usize;
+        let a = (i / 625) as usize;
+        let b = ((i / 125) % 5) as usize;
+        let c = ((i / 25) % 5) as usize;
+        let d = ((i / 5) % 5) as usize;
+        let e = (i % 5) as usize;
 
-fn get_round_data() -> &'static [([usize; 5], u32); 3124] {
-    ROUND_DATA.get_or_init(|| {
-        let mut result = [([0usize; 5], 0u32); 3124];
-        for (idx, i) in (1u16..3125).enumerate() {
-            let indices_u8 = [
-                (i / 625) as u8,
-                ((i / 125) % 5) as u8,
-                ((i / 25) % 5) as u8,
-                ((i / 5) % 5) as u8,
-                (i % 5) as u8,
-            ];
-            let indices_usize = [
-                indices_u8[0] as usize,
-                indices_u8[1] as usize,
-                indices_u8[2] as usize,
-                indices_u8[3] as usize,
-                indices_u8[4] as usize,
-            ];
-            result[idx] = (indices_usize, pirates_binary(indices_u8));
-        }
-        result
-    })
+        let bin = PIRATE_BIN[0][a]
+            | PIRATE_BIN[1][b]
+            | PIRATE_BIN[2][c]
+            | PIRATE_BIN[3][d]
+            | PIRATE_BIN[4][e];
+        result[idx] = ([a, b, c, d, e], bin);
+
+        i += 1;
+    }
+    result
 }
+
+/// Precomputed data for all 3124 index combinations: (indices as usize, binary).
+///
+/// This is a `const` (not lazy) to avoid first-call initialization costs.
+const ROUND_DATA: [([usize; 5], u32); 3124] = build_round_data();
 
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
     use std::mem::MaybeUninit;
@@ -493,8 +504,6 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
         ],
     ];
 
-    let round_data = get_round_data();
-
     // Use MaybeUninit to avoid zero-initialization (we write every element)
     let mut bins: Box<[MaybeUninit<u32>; 3124]> = Box::new([const { MaybeUninit::uninit() }; 3124]);
     let mut probs: Box<[MaybeUninit<f64>; 3124]> =
@@ -505,15 +514,13 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
     let mut maxbets: Box<[MaybeUninit<u32>; 3124]> =
         Box::new([const { MaybeUninit::uninit() }; 3124]);
 
-    // Process 4 items per iteration (3124 = 781 * 4)
-    // SAFETY: All indices are in bounds, indices i0-i4 are in range [0, 5)
+    // SAFETY: All indices are in bounds, indices i0-i4 are in range [0, 5).
     unsafe {
         for chunk in 0..781 {
             let base = chunk * 4;
-
             for offset in 0..4 {
                 let idx = base + offset;
-                let (nums, bin) = round_data.get_unchecked(idx);
+                let (nums, bin) = ROUND_DATA.get_unchecked(idx);
                 let [i0, i1, i2, i3, i4] = *nums;
 
                 bins.get_unchecked_mut(idx).write(*bin);
