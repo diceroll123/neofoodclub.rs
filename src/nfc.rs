@@ -854,9 +854,6 @@ impl NeoFoodClub {
                 }
 
                 let bet_amount = bet_amounts[bet_index].unwrap_or(0);
-                if bet_amount == 0 {
-                    return acc;
-                }
 
                 // payout per bet is capped at 1,000,000 NP
                 let payout = (odds[array_index] as u64 * bet_amount as u64).min(1_000_000) as u32;
