@@ -227,6 +227,13 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
         }
     }
 
+    if amounts_hash.len() % 3 != 0 {
+        return Err(format!(
+            "Invalid amounts hash '{}'. Length must be a multiple of 3.",
+            amounts_hash
+        ));
+    }
+
     let invalid_err = || {
         format!(
             "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
@@ -245,9 +252,9 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
     }
 
     let bytes = amounts_hash.as_bytes();
-    let mut out = Vec::with_capacity((bytes.len() + 2).div_ceil(3));
+    let mut out = Vec::with_capacity(bytes.len() / 3);
 
-    // validates and decodes, pushing every 3 chars; handles remainder naturally.
+    // validates and decodes, pushing every 3 chars.
     let mut value = 0_u32;
     let mut n = 0_u8;
 
@@ -261,10 +268,6 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
             value = 0;
             n = 0;
         }
-    }
-
-    if n != 0 {
-        push_decoded(&mut out, value);
     }
 
     Ok(out)
