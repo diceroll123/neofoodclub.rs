@@ -27,18 +27,6 @@ fn get_indices_3124() -> &'static [usize; 3124] {
     })
 }
 
-/// Specialized argsort for 3124-element arrays (common in round_dict_data)
-/// Uses a pre-allocated index array and generic comparator for better inlining
-#[inline]
-pub fn argsort_3124<T, F>(arr: &[T; 3124], compare: F) -> Box<[usize; 3124]>
-where
-    F: Fn(&T, &T) -> Ordering,
-{
-    let mut indices: Box<[usize; 3124]> = Box::new(*get_indices_3124());
-    indices.sort_unstable_by(|&i, &j| compare(&arr[i], &arr[j]));
-    indices
-}
-
 /// Specialized argsort for 3124-element slices
 /// Panics if slice length != 3124
 #[inline]
