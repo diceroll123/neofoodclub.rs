@@ -840,18 +840,27 @@ impl NeoFoodClub {
             return 0;
         }
 
+        let round_dict_data = self.round_dict_data();
+        let bins = &round_dict_data.bins;
+        let odds = &round_dict_data.odds;
+
         bets.array_indices
             .iter()
             .enumerate()
-            .fold(0, |acc, (bet_index, array_index)| {
-                let bet_bin = self.round_dict_data().bins[*array_index];
-                if bet_bin & winners_binary == bet_bin {
-                    acc + (self.round_dict_data().odds[*array_index]
-                        * bet_amounts[bet_index].unwrap_or(0))
-                    .clamp(0, 1_000_000)
-                } else {
-                    acc
+            .fold(0, |acc, (bet_index, &array_index)| {
+                let bet_bin = bins[array_index];
+                if bet_bin & winners_binary != bet_bin {
+                    return acc;
                 }
+
+                let bet_amount = bet_amounts[bet_index].unwrap_or(0);
+                if bet_amount == 0 {
+                    return acc;
+                }
+
+                // payout per bet is capped at 1,000,000 NP
+                let payout = (odds[array_index] as u64 * bet_amount as u64).min(1_000_000) as u32;
+                acc + payout
             })
     }
 }
