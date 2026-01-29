@@ -1,0 +1,132 @@
+name: Benchmark Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark:
+    name: Benchmark test execution time
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Install Rust nightly
+        run: rustup default nightly
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build tests (PR branch)
+        run: cargo test --no-run
+
+      - name: Run tests with timing (PR branch)
+        run: |
+          # Run tests multiple times and capture timing
+          for i in 1 2 3; do
+            cargo test -- -Z unstable-options --report-time 2>&1 | tee -a pr-test-run-$i.txt
+          done
+
+          # Parse individual test times and aggregate
+          cat pr-test-run-*.txt | grep -E "^test .* ok <" | sed 's/test \(.*\) \.\.\. ok <\(.*\)s>/\1 \2/' | sort > pr-times.txt
+
+          # Also capture total test time
+          cargo test 2>&1 | grep -E "^test result:" | tail -1 > pr-summary.txt
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          clean: false
+
+      - name: Build tests (base branch)
+        run: cargo test --no-run
+
+      - name: Run tests with timing (base branch)
+        run: |
+          for i in 1 2 3; do
+            cargo test -- -Z unstable-options --report-time 2>&1 | tee -a base-test-run-$i.txt
+          done
+
+          cat base-test-run-*.txt | grep -E "^test .* ok <" | sed 's/test \(.*\) \.\.\. ok <\(.*\)s>/\1 \2/' | sort > base-times.txt
+          cargo test 2>&1 | grep -E "^test result:" | tail -1 > base-summary.txt
+
+      - name: Compare test times
+        id: compare
+        run: |
+          echo "## Test Benchmark Comparison" > comparison.md
+          echo "" >> comparison.md
+          echo "Comparing \`${{ github.head_ref }}\` against \`${{ github.base_ref }}\`" >> comparison.md
+          echo "" >> comparison.md
+
+          echo "### Summary" >> comparison.md
+          echo "| Branch | Result |" >> comparison.md
+          echo "|--------|--------|" >> comparison.md
+          echo "| Base | $(cat base-summary.txt) |" >> comparison.md
+          echo "| PR | $(cat pr-summary.txt) |" >> comparison.md
+          echo "" >> comparison.md
+
+          echo "### Individual Test Times" >> comparison.md
+          echo "" >> comparison.md
+          echo "| Test | Base | PR | Change |" >> comparison.md
+          echo "|------|------|-----|--------|" >> comparison.md
+
+          # Get unique test names from both files
+          cat pr-times.txt base-times.txt 2>/dev/null | awk '{print $1}' | sort -u | while read test_name; do
+            if [ -z "$test_name" ]; then continue; fi
+
+            # Get average time from PR (may have multiple runs)
+            pr_times=$(grep "^$test_name " pr-times.txt 2>/dev/null | awk '{print $2}')
+            base_times=$(grep "^$test_name " base-times.txt 2>/dev/null | awk '{print $2}')
+
+            if [ -n "$pr_times" ] && [ -n "$base_times" ]; then
+              # Calculate averages
+              pr_avg=$(echo "$pr_times" | awk '{sum+=$1; count++} END {if(count>0) printf "%.3f", sum/count; else print "0"}')
+              base_avg=$(echo "$base_times" | awk '{sum+=$1; count++} END {if(count>0) printf "%.3f", sum/count; else print "0"}')
+
+              if [ "$base_avg" != "0" ] && [ "$base_avg" != "0.000" ]; then
+                change=$(awk "BEGIN {printf \"%.1f\", (($pr_avg - $base_avg) / $base_avg) * 100}")
+                if (( $(echo "$change < -10" | bc -l) )); then
+                  indicator="🟢 ${change}%"
+                elif (( $(echo "$change > 10" | bc -l) )); then
+                  indicator="🔴 +${change}%"
+                else
+                  indicator="⚪ ${change}%"
+                fi
+                echo "| \`$test_name\` | ${base_avg}s | ${pr_avg}s | $indicator |" >> comparison.md
+              fi
+            elif [ -n "$pr_times" ]; then
+              pr_avg=$(echo "$pr_times" | awk '{sum+=$1; count++} END {if(count>0) printf "%.3f", sum/count; else print "0"}')
+              echo "| \`$test_name\` | - | ${pr_avg}s | 🆕 new |" >> comparison.md
+            fi
+          done
+
+          echo "" >> comparison.md
+          echo "Legend: 🟢 faster (>10%) | 🔴 slower (>10%) | ⚪ within 10% | 🆕 new test" >> comparison.md
+
+          cat comparison.md
+
+      - name: Find existing comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        if: github.event_name == 'pull_request'
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '## Test Benchmark Comparison'
+
+      - name: Post or update comment
+        uses: peter-evans/create-or-update-comment@v4
+        if: github.event_name == 'pull_request'
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: comparison.md
+          edit-mode: replace
