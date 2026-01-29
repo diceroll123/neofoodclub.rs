@@ -89,6 +89,7 @@ jobs:
           PR_BIN=$(cat $GITHUB_WORKSPACE/pr-test-binary.txt)
           BASE_BIN=$(cat $GITHUB_WORKSPACE/base-test-binary.txt)
           MIN_RUNS=100
+          WARMUP_RUNS=10
 
           echo "PR binary: $PR_BIN"
           echo "Base binary: $BASE_BIN"
@@ -98,6 +99,7 @@ jobs:
           echo "Comparing \`${{ github.head_ref }}\` against \`${{ github.base_ref }}\` using [hyperfine](https://github.com/sharkdp/hyperfine)" >> comparison.md
           echo "" >> comparison.md
           echo "Minimum runs: $MIN_RUNS" >> comparison.md
+          echo "Warmup runs: $WARMUP_RUNS" >> comparison.md
           echo "" >> comparison.md
           echo "| Test | Base | PR | Change |" >> comparison.md
           echo "|------|------|-----|--------|" >> comparison.md
@@ -114,7 +116,7 @@ jobs:
             # Run hyperfine for this specific test
             if ! hyperfine \
               -N \
-              --warmup 2 \
+              --warmup $WARMUP_RUNS \
               --min-runs $MIN_RUNS \
               --export-json "bench-result.json" \
               --style none \
