@@ -227,7 +227,7 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
         }
     }
 
-    if amounts_hash.len() % 3 != 0 {
+    if !amounts_hash.len().is_multiple_of(3) {
         return Err(format!(
             "Invalid amounts hash '{}'. Length must be a multiple of 3.",
             amounts_hash
