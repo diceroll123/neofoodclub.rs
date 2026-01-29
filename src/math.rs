@@ -459,8 +459,8 @@ const fn build_round_data() -> [([usize; 5], u32); 3124] {
 
 /// Precomputed data for all 3124 index combinations: (indices as usize, binary).
 ///
-/// This is a `const` (not lazy) to avoid first-call initialization costs.
-const ROUND_DATA: [([usize; 5], u32); 3124] = build_round_data();
+/// This is a `static` (not lazy) to avoid first-call initialization costs.
+static ROUND_DATA: [([usize; 5], u32); 3124] = build_round_data();
 
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
     use std::mem::MaybeUninit;
