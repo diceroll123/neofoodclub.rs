@@ -70,16 +70,20 @@ pub fn random_full_pirates_binary() -> u32 {
 /// ```
 #[inline]
 pub fn binary_to_indices(binary: u32) -> [u8; 5] {
-    let mut indices = [0; 5];
+    // Maps a 4-bit arena nibble to its pirate index.
+    // Semantics match the previous implementation for all values 0..=15:
+    // - 0 => 0
+    // - otherwise => 4 - trailing_zeros(nibble)
+    // This is effectively a branchless, unrolled fast path.
+    const NIBBLE_TO_INDEX: [u8; 16] = [0, 4, 3, 4, 2, 4, 3, 4, 1, 4, 3, 4, 2, 4, 3, 4];
 
-    for (i, index) in indices.iter_mut().enumerate() {
-        let nibble = (binary >> (4 * (4 - i))) & 0xF;
-
-        if nibble != 0 {
-            *index = 4 - nibble.trailing_zeros() as u8;
-        }
-    }
-    indices
+    [
+        NIBBLE_TO_INDEX[((binary >> 16) & 0xF) as usize],
+        NIBBLE_TO_INDEX[((binary >> 12) & 0xF) as usize],
+        NIBBLE_TO_INDEX[((binary >> 8) & 0xF) as usize],
+        NIBBLE_TO_INDEX[((binary >> 4) & 0xF) as usize],
+        NIBBLE_TO_INDEX[(binary & 0xF) as usize],
+    ]
 }
 
 #[inline]
