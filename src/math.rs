@@ -237,7 +237,7 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
     };
 
     let bytes = amounts_hash.as_bytes();
-    let mut out = Vec::with_capacity((bytes.len() + 2) / 3);
+    let mut out = Vec::with_capacity(bytes.len().div_ceil(3));
 
     // Fast path for the common case (hash length is a multiple of 3).
     let mut chunks = bytes.chunks_exact(3);
