@@ -253,23 +253,6 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
         });
     }
 
-    // Preserve existing behavior for non-multiple-of-3 input lengths.
-    let rem = chunks.remainder();
-    if !rem.is_empty() {
-        let mut value = 0_u32;
-        for &b in rem {
-            let idx = decode_index(b).ok_or_else(invalid_err)?;
-            value = value * 52 + idx;
-        }
-
-        let decoded = value.saturating_sub(BET_AMOUNT_MAX);
-        out.push(if decoded >= BET_AMOUNT_MIN {
-            Some(decoded)
-        } else {
-            None
-        });
-    }
-
     Ok(out)
 }
 
