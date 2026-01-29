@@ -97,6 +97,29 @@ pub fn bets_hash_check(bets_hash: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[inline]
+pub fn amounts_hash_check(amounts_hash: &str) -> Result<(), String> {
+    if !amounts_hash.len().is_multiple_of(3) {
+        return Err(format!(
+            "Invalid amounts hash '{}'. Length must be a multiple of 3.",
+            amounts_hash
+        ));
+    }
+
+    if !amounts_hash
+        .as_bytes()
+        .iter()
+        .all(|&b| matches!(b, b'a'..=b'z' | b'A'..=b'Z'))
+    {
+        return Err(format!(
+            "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
+            amounts_hash
+        ));
+    }
+
+    Ok(())
+}
+
 /// Returns the bet indices from a given bet hash.
 /// ```
 /// let bin = neofoodclub::math::bets_hash_to_bet_indices("").unwrap();
@@ -219,27 +242,15 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
 #[inline]
 pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>>, String> {
     #[inline]
-    fn decode_index(byte: u8) -> Option<u32> {
+    fn decode_index(byte: u8) -> u32 {
         match byte {
-            b'a'..=b'z' => Some((byte - b'a') as u32),
-            b'A'..=b'Z' => Some((byte - b'A' + 26) as u32),
-            _ => None,
+            b'a'..=b'z' => (byte - b'a') as u32,
+            b'A'..=b'Z' => (byte - b'A' + 26) as u32,
+            _ => unreachable!("amounts_hash_check ensures only ASCII [a-zA-Z] bytes"),
         }
     }
 
-    if !amounts_hash.len().is_multiple_of(3) {
-        return Err(format!(
-            "Invalid amounts hash '{}'. Length must be a multiple of 3.",
-            amounts_hash
-        ));
-    }
-
-    let invalid_err = || {
-        format!(
-            "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
-            amounts_hash
-        )
-    };
+    amounts_hash_check(amounts_hash)?;
 
     #[inline]
     fn push_decoded(out: &mut Vec<Option<u32>>, value: u32) {
@@ -259,7 +270,7 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
     let mut n = 0_u8;
 
     for &b in bytes {
-        let idx = decode_index(b).ok_or_else(invalid_err)?;
+        let idx = decode_index(b);
         value = value * 52 + idx;
         n += 1;
 
