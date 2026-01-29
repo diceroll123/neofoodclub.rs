@@ -1,4 +1,5 @@
 use comfy_table::Table;
+use std::collections::HashMap;
 
 use crate::{
     arena::ARENA_NAMES,
@@ -79,10 +80,9 @@ pub struct Bets {
 impl Bets {
     /// Creates a new Bets struct from a list of indices (without bet amounts)
     pub fn new(nfc: &NeoFoodClub, indices: Vec<usize>) -> Self {
-        let bet_binaries = indices
-            .iter()
-            .map(|&i| nfc.round_dict_data().bins[i])
-            .collect();
+        let data = nfc.round_dict_data();
+        let mut bet_binaries = Vec::with_capacity(indices.len());
+        bet_binaries.extend(indices.iter().map(|&i| data.bins[i]));
 
         let odds = Odds::new(nfc, &indices);
 
@@ -168,12 +168,13 @@ impl Bets {
         let Some(amounts) = &self.bet_amounts else {
             return vec![];
         };
+        let data = nfc.round_dict_data();
 
         self.array_indices
             .iter()
             .zip(amounts.iter())
             .map(|(i, a)| {
-                let er = nfc.round_dict_data().ers[*i];
+                let er = data.ers[*i];
                 let amount = a.unwrap_or(0) as f64;
                 amount.mul_add(er, -amount)
             })
@@ -187,10 +188,8 @@ impl Bets {
 
     /// Returns the expected return of each bet
     pub fn expected_return_list(&self, nfc: &NeoFoodClub) -> Vec<f64> {
-        self.array_indices
-            .iter()
-            .map(|&i| nfc.round_dict_data().ers[i])
-            .collect()
+        let data = nfc.round_dict_data();
+        self.array_indices.iter().map(|&i| data.ers[i]).collect()
     }
 
     /// Returns the sum of expected return of the bets
@@ -223,10 +222,19 @@ impl Bets {
 
     /// Creates a new Bets struct from a list of binaries
     pub fn from_binaries(nfc: &NeoFoodClub, binaries: Vec<u32>) -> Self {
-        // maintaining the order of the binaries is important, at the cost of some performance
+        // maintaining the order of the binaries is important
+        let data = nfc.round_dict_data();
+        let bin_to_index: HashMap<u32, usize> = data
+            .bins
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(i, bin)| (bin, i))
+            .collect();
+
         let bin_indices: Vec<usize> = binaries
             .iter()
-            .filter_map(|b| nfc.round_dict_data().bins.iter().position(|bin| bin == b))
+            .filter_map(|b| bin_to_index.get(b).copied())
             .collect();
 
         Self::new(nfc, bin_indices)
@@ -259,10 +267,9 @@ impl Bets {
     /// Returns a nested array of the indices of the pirates in their arenas
     /// making up these bets.
     pub fn get_indices(&self) -> Vec<[u8; 5]> {
-        self.bet_binaries
-            .iter()
-            .map(|b| binary_to_indices(*b))
-            .collect()
+        let mut out = Vec::with_capacity(self.bet_binaries.len());
+        out.extend(self.bet_binaries.iter().map(|b| binary_to_indices(*b)));
+        out
     }
 
     /// Returns the bet binaries
@@ -361,10 +368,8 @@ impl Bets {
 
     /// Returns the odds of the bets
     pub fn odds_values(&self, nfc: &NeoFoodClub) -> Vec<u32> {
-        self.array_indices
-            .iter()
-            .map(|i| nfc.round_dict_data().odds[*i])
-            .collect()
+        let data = nfc.round_dict_data();
+        self.array_indices.iter().map(|i| data.odds[*i]).collect()
     }
 
     /// Makes a URL for the bets using the NeoFoodClub object
@@ -407,6 +412,7 @@ impl Bets {
 
     /// Returns a table visualization of the bets, with stats
     pub fn stats_table(&self, nfc: &NeoFoodClub) -> String {
+        let data = nfc.round_dict_data();
         let mut table = Table::new();
 
         let mut headers = vec!["#", "Odds", "ER"];
@@ -425,36 +431,25 @@ impl Bets {
 
         let arenas = nfc.get_arenas();
 
-        for (bet_index, (bet_binary, bet_indices)) in self
-            .get_binaries()
-            .iter()
-            .zip(self.get_indices().iter())
-            .enumerate()
+        let indices = self.get_indices();
+        for (bet_index, (&array_index, bet_indices)) in
+            self.array_indices.iter().zip(indices.iter()).enumerate()
         {
+            let bet_binary = self.bet_binaries[bet_index];
             let mut row = vec![(bet_index + 1).to_string()];
-
-            let bin_index = nfc
-                .round_dict_data()
-                .bins
-                .iter()
-                .position(|&r| r == *bet_binary)
-                .unwrap();
 
             let hex = format!("0x{bet_binary:0>5X}");
 
             row.extend(vec![
-                nfc.round_dict_data().odds[bin_index].to_string(),
-                format!("{:.3}:1", nfc.round_dict_data().ers[bin_index]),
+                data.odds[array_index].to_string(),
+                format!("{:.3}:1", data.ers[array_index]),
             ]);
 
             if !nes.is_empty() {
                 row.push(format!("{:.2}", nes[bet_index]));
             }
 
-            row.extend(vec![
-                nfc.round_dict_data().maxbets[bin_index].to_string(),
-                hex,
-            ]);
+            row.extend(vec![data.maxbets[array_index].to_string(), hex]);
 
             for (arena_index, pirate_index) in bet_indices.iter().enumerate() {
                 if pirate_index == &0 {
