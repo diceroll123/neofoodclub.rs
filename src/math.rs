@@ -83,7 +83,7 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 }
 
 #[inline]
-pub fn bets_hash_regex_check(bets_hash: &str) -> Result<(), String> {
+pub fn bets_hash_check(bets_hash: &str) -> Result<(), String> {
     if !bets_hash
         .as_bytes()
         .iter()
@@ -116,7 +116,7 @@ pub fn bets_hash_regex_check(bets_hash: &str) -> Result<(), String> {
 /// ```
 #[inline]
 pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Result<Vec<[u8; 5]>, String> {
-    bets_hash_regex_check(bets_hash)?;
+    bets_hash_check(bets_hash)?;
 
     let indices: Vec<u8> = bets_hash.bytes().map(|byte| byte - b'a').collect();
 
@@ -166,7 +166,7 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Result<Vec<[u8; 5]>, String>
 /// ```
 #[inline]
 pub fn bets_hash_to_bets_count(bets_hash: &str) -> Result<usize, String> {
-    bets_hash_regex_check(bets_hash)?;
+    bets_hash_check(bets_hash)?;
     Ok(bets_hash_to_bet_indices(bets_hash)?.len())
 }
 
@@ -286,7 +286,7 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
 ///```
 #[inline]
 pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Result<Vec<u32>, String> {
-    bets_hash_regex_check(bets_hash)?;
+    bets_hash_check(bets_hash)?;
     Ok(bets_hash_to_bet_indices(bets_hash)?
         .iter()
         .map(|&indices| pirates_binary(indices))
