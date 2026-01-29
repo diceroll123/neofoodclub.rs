@@ -1784,7 +1784,7 @@ mod tests {
     #[test]
     fn test_math_functions() {
         use neofoodclub::math::{
-            amounts_hash_to_bet_amounts, bets_hash_regex_check, binary_to_indices, pirate_binary,
+            amounts_hash_to_bet_amounts, bets_hash_check, binary_to_indices, pirate_binary,
             pirates_binary, random_full_pirates_binary,
         };
 
@@ -1793,8 +1793,8 @@ mod tests {
         assert_eq!(pirates_binary([0, 1, 2, 3, 4]), 0x08421);
         assert_eq!(random_full_pirates_binary().count_ones(), 5);
         assert_eq!(binary_to_indices(1), [0, 0, 0, 0, 4]);
-        assert!(bets_hash_regex_check("abcdefg").is_ok());
-        assert!(bets_hash_regex_check("abcdefz").is_err());
+        assert!(bets_hash_check("abcdefg").is_ok());
+        assert!(bets_hash_check("abcdefz").is_err());
         assert_eq!(
             amounts_hash_to_bet_amounts("AaYAbWAcUAdSAeQ").unwrap(),
             vec![Some(50), Some(100), Some(150), Some(200), Some(250)]
