@@ -1,6 +1,8 @@
 #![feature(test)]
 
 extern crate test;
+use std::cell::OnceCell;
+
 use test::Bencher;
 
 use neofoodclub::math::{self, BET_AMOUNT_MAX, BET_AMOUNT_MIN};
@@ -21,29 +23,72 @@ const ROUND_DATA_URL_NO_WINNERS: &str = r#"/#round=7956&pirates=[[2,8,14,11],[20
 
 const BET_AMOUNT: u32 = 8000;
 
-fn make_test_nfc() -> NeoFoodClub {
-    NeoFoodClub::from_json(ROUND_DATA_JSON, Some(BET_AMOUNT), None, None)
+fn cached_make_test_nfc() -> NeoFoodClub {
+    thread_local! {
+        static CACHED: OnceCell<NeoFoodClub> = const { OnceCell::new() };
+    }
+
+    CACHED.with(|cell| {
+        cell.get_or_init(|| NeoFoodClub::from_json(ROUND_DATA_JSON, Some(BET_AMOUNT), None, None))
+            .clone()
+    })
 }
 
-fn make_test_nfc_logit() -> NeoFoodClub {
-    NeoFoodClub::from_json(
-        ROUND_DATA_JSON,
-        Some(BET_AMOUNT),
-        Some(ProbabilityModel::MultinomialLogitModel),
-        None,
-    )
+fn cached_make_test_nfc_logit() -> NeoFoodClub {
+    thread_local! {
+        static CACHED: OnceCell<NeoFoodClub> = const { OnceCell::new() };
+    }
+
+    CACHED.with(|cell| {
+        cell.get_or_init(|| {
+            NeoFoodClub::from_json(
+                ROUND_DATA_JSON,
+                Some(BET_AMOUNT),
+                Some(ProbabilityModel::MultinomialLogitModel),
+                None,
+            )
+        })
+        .clone()
+    })
 }
 
-fn make_test_nfc_with_modifier(modifier: Modifier) -> NeoFoodClub {
-    NeoFoodClub::from_json(ROUND_DATA_JSON, Some(BET_AMOUNT), None, Some(modifier))
+fn cached_make_test_nfc_from_url_with_modifier(modifier: Modifier) -> NeoFoodClub {
+    thread_local! {
+        static CACHED: OnceCell<NeoFoodClub> = const { OnceCell::new() };
+    }
+
+    CACHED.with(|cell| {
+        cell.get_or_init(|| {
+            NeoFoodClub::from_url(ROUND_DATA_URL, Some(BET_AMOUNT), None, Some(modifier))
+        })
+        .clone()
+    })
 }
 
-fn make_test_nfc_from_url() -> NeoFoodClub {
-    NeoFoodClub::from_url(ROUND_DATA_URL, Some(BET_AMOUNT), None, None)
+fn cached_make_test_nfc_with_modifier(modifier: Modifier) -> NeoFoodClub {
+    thread_local! {
+        static CACHED: OnceCell<NeoFoodClub> = const { OnceCell::new() };
+    }
+
+    CACHED.with(|cell| {
+        cell.get_or_init(|| {
+            NeoFoodClub::from_json(ROUND_DATA_JSON, Some(BET_AMOUNT), None, Some(modifier))
+        })
+        .clone()
+    })
 }
 
-fn make_test_nfc_from_url_with_modifier(modifier: Modifier) -> NeoFoodClub {
-    NeoFoodClub::from_url(ROUND_DATA_URL, Some(BET_AMOUNT), None, Some(modifier))
+fn cached_make_test_nfc_from_url() -> NeoFoodClub {
+    thread_local! {
+        // `NeoFoodClub` is not `Sync` (it uses `std::cell::OnceCell` internally),
+        // so we can't store it in a shared `static`. Cache it per-thread instead.
+        static CACHED: OnceCell<NeoFoodClub> = const { OnceCell::new() };
+    }
+
+    CACHED.with(|cell| {
+        cell.get_or_init(|| NeoFoodClub::from_url(ROUND_DATA_URL, Some(BET_AMOUNT), None, None))
+            .clone()
+    })
 }
 
 #[cfg(test)]
@@ -69,7 +114,7 @@ mod tests {
         static CACHED: OnceLock<Bets> = OnceLock::new();
         CACHED
             .get_or_init(|| {
-                let nfc = make_test_nfc();
+                let nfc = cached_make_test_nfc();
                 nfc.make_bustproof_bets().unwrap()
             })
             .clone()
@@ -77,7 +122,7 @@ mod tests {
 
     #[test]
     fn test_getters() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert_eq!(nfc.round(), 8765);
         assert_eq!(nfc.bet_amount, Some(8000));
@@ -85,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_from_url() {
-        let nfc = make_test_nfc_from_url();
+        let nfc = cached_make_test_nfc_from_url();
 
         assert_eq!(nfc.round(), 7956);
         assert_eq!(nfc.bet_amount, Some(8000));
@@ -93,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_max_amount_of_bets_10() {
-        let mut nfc = make_test_nfc();
+        let mut nfc = cached_make_test_nfc();
         let new_modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, None).unwrap();
 
         nfc.modifier = new_modifier;
@@ -103,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_max_amount_of_bets_15() {
-        let mut nfc = make_test_nfc();
+        let mut nfc = cached_make_test_nfc();
         let new_modifier = Modifier::new(ModifierFlags::CHARITY_CORNER.bits(), None, None).unwrap();
 
         nfc.modifier = new_modifier;
@@ -147,7 +192,7 @@ mod tests {
         // since the order is not guaranteed, we will be using a querystring parser
         // and then comparing the values
 
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = cached_bustproof_bets();
 
         let url = nfc.make_url(Some(&bets), true, false);
@@ -189,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_make_url_from_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = cached_bustproof_bets();
 
         assert_eq!(
@@ -200,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_get_win_units() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = cached_bustproof_bets();
 
         assert_eq!(nfc.get_win_units(&bets), 20);
@@ -208,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_get_win_np() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = cached_bustproof_bets();
 
         assert_eq!(nfc.get_win_np(&bets), 32_000);
@@ -216,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_get_win_np_from_url() {
-        let nfc = make_test_nfc_from_url();
+        let nfc = cached_make_test_nfc_from_url();
         let bets = nfc
             .make_bets_from_hash("aukacfukycuulacauutcbukdc")
             .unwrap();
@@ -233,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_is_bustproof_false() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
         assert!(!bets.is_bustproof());
@@ -241,7 +286,7 @@ mod tests {
 
     #[test]
     fn test_is_guaranteed_to_win_true() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = cached_bustproof_bets();
 
         assert!(bets.is_guaranteed_win(&nfc));
@@ -249,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_is_guaranteed_to_win_false() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
         assert!(!bets.is_guaranteed_win(&nfc));
@@ -257,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_get_winning_pirates() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let winners = nfc.winners();
 
         assert_eq!(winners, [3, 2, 3, 2, 2]);
@@ -265,7 +310,7 @@ mod tests {
 
     #[test]
     fn test_get_winners_binary() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let winners = nfc.winners_binary();
 
         assert_eq!(winners, 148036);
@@ -275,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_is_over() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         assert!(nfc.is_over());
     }
 
@@ -288,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_is_crazy_true() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
         assert!(bets.is_crazy());
@@ -296,7 +341,7 @@ mod tests {
 
     #[test]
     fn test_maxter_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_max_ter_bets();
 
         assert!(!bets.is_crazy());
@@ -304,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_is_gambit_false() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
         assert!(!bets.is_gambit());
@@ -318,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_is_gambit_true() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_gambit_bets(0x12481);
 
         assert!(bets.is_gambit());
@@ -350,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_winning_pirates_from_url() {
-        let nfc = make_test_nfc_from_url();
+        let nfc = cached_make_test_nfc_from_url();
 
         assert_eq!(nfc.winners(), [1, 3, 4, 2, 4]);
     }
@@ -359,7 +404,7 @@ mod tests {
     fn test_bet_hash_encoding() {
         let crazy_hash = "ltqvqwgimhqtvrnywrwvijwnn";
 
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = nfc.make_bets_from_hash(crazy_hash).unwrap();
 
@@ -368,7 +413,7 @@ mod tests {
 
     #[test]
     fn test_bet_amount_setting() {
-        let mut nfc = make_test_nfc();
+        let mut nfc = cached_make_test_nfc();
         nfc.bet_amount = Some(1000);
 
         assert_eq!(nfc.bet_amount, Some(1000));
@@ -376,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_bet_amount_setting_with_bets() {
-        let mut nfc = make_test_nfc();
+        let mut nfc = cached_make_test_nfc();
         nfc.bet_amount = Some(1000);
 
         let bets = nfc.make_winning_gambit_bets().unwrap();
@@ -386,7 +431,7 @@ mod tests {
 
     #[test]
     fn test_arena_ratio() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let ratio = nfc.get_arenas().get_arena(0).unwrap().ratio();
 
@@ -395,7 +440,7 @@ mod tests {
 
     #[test]
     fn test_arena_is_negative() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let arena = nfc.get_arenas().get_arena(0).unwrap();
 
@@ -404,7 +449,7 @@ mod tests {
 
     #[test]
     fn test_arena_name() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let arena = nfc.get_arenas().get_arena(0).unwrap();
 
@@ -413,7 +458,7 @@ mod tests {
 
     #[test]
     fn test_arena_ids() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let arena = nfc.get_arenas().get_arena(0).unwrap();
 
@@ -422,7 +467,7 @@ mod tests {
 
     #[test]
     fn test_arena_get_pirate_by_index() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let arena = nfc.get_arenas().get_arena(0).unwrap();
 
@@ -433,7 +478,7 @@ mod tests {
 
     #[test]
     fn test_arenas_get_pirate_by_id() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirate = nfc.get_arenas().get_pirate_by_id(1).unwrap();
 
@@ -442,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_arenas_get_pirates_by_id() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirates = nfc.get_arenas().get_pirates_by_id(&[1, 2, 3]);
 
@@ -453,7 +498,7 @@ mod tests {
 
     #[test]
     fn test_arenas_get_all_pirates_flat() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirates = nfc.get_arenas().get_all_pirates_flat();
 
@@ -462,7 +507,7 @@ mod tests {
 
     #[test]
     fn test_arenas_get_pirates_from_binary() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirates = nfc.get_arenas().get_pirates_from_binary(0x12480);
 
@@ -476,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_arenas_get_all_pirates() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirates = nfc.get_arenas().get_all_pirates();
 
@@ -485,7 +530,7 @@ mod tests {
 
     #[test]
     fn test_arenas_best() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let best = nfc.get_arenas().best();
 
@@ -498,7 +543,7 @@ mod tests {
 
     #[test]
     fn test_arenas_pirate_ids() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let ids = nfc.get_arenas().pirate_ids();
 
@@ -507,7 +552,7 @@ mod tests {
 
     #[test]
     fn test_partial_pirate_get_image() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirate = nfc.get_arenas().get_pirate_by_id(1).unwrap();
 
@@ -519,7 +564,7 @@ mod tests {
 
     #[test]
     fn test_pirate_positive_foods() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirate = nfc.get_arenas().get_pirate_by_id(1).unwrap();
 
@@ -530,7 +575,7 @@ mod tests {
 
     #[test]
     fn test_pirate_positive_foods_none() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirate = nfc.get_arenas().get_pirate_by_id(4).unwrap();
 
@@ -541,7 +586,7 @@ mod tests {
 
     #[test]
     fn test_pirate_negative_foods_none() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirate = nfc.get_arenas().get_pirate_by_id(1).unwrap();
 
@@ -552,7 +597,7 @@ mod tests {
 
     #[test]
     fn test_pirate_negative_foods() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let pirate = nfc.get_arenas().get_pirate_by_id(2).unwrap();
 
@@ -584,7 +629,7 @@ mod tests {
 
     #[test]
     fn test_make_best_gambit_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_best_gambit_bets();
 
         assert!(bets.is_gambit());
@@ -592,7 +637,7 @@ mod tests {
 
     #[test]
     fn test_make_random_gambit_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_random_gambit_bets();
 
         assert!(bets.is_gambit());
@@ -600,7 +645,7 @@ mod tests {
 
     #[test]
     fn test_make_random_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_random_bets();
 
         assert_eq!(bets.len(), nfc.max_amount_of_bets());
@@ -608,7 +653,7 @@ mod tests {
 
     #[test]
     fn test_make_all_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_all_bets();
 
         assert_eq!(bets.len(), 3124);
@@ -617,13 +662,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_make_gambit_bets_broken() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         nfc.make_gambit_bets(0x12480);
     }
 
     #[test]
     fn test_make_tenbet_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
         assert_eq!(bets.unwrap().len(), 10);
@@ -631,7 +676,7 @@ mod tests {
 
     #[test]
     fn test_is_tenbet_true() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
         assert!(bets.unwrap().is_tenbet());
@@ -639,7 +684,7 @@ mod tests {
 
     #[test]
     fn test_is_tenbet_false() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_crazy_bets();
 
         assert!(!bets.is_tenbet());
@@ -654,7 +699,7 @@ mod tests {
 
     #[test]
     fn test_count_tenbets_one() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x80000);
 
         assert_eq!(bets.unwrap().count_tenbets(), 1);
@@ -662,7 +707,7 @@ mod tests {
 
     #[test]
     fn test_count_tenbets_two() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88000);
 
         assert_eq!(bets.unwrap().count_tenbets(), 2);
@@ -670,7 +715,7 @@ mod tests {
 
     #[test]
     fn test_count_tenbets_three() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
         assert_eq!(bets.unwrap().count_tenbets(), 3);
@@ -685,7 +730,7 @@ mod tests {
 
     #[test]
     fn test_bets_is_empty() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
         assert!(!bets.unwrap().is_empty());
@@ -693,7 +738,7 @@ mod tests {
 
     #[test]
     fn test_bets_get_binaries() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_tenbet_bets(0x88800);
 
         let binaries = bets.as_ref().unwrap().get_binaries();
@@ -703,7 +748,7 @@ mod tests {
 
     #[test]
     fn test_nfc_winning_pirates() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let pirates = nfc.winning_pirates().unwrap();
 
         assert_eq!(pirates.len(), 5);
@@ -711,19 +756,19 @@ mod tests {
 
     #[test]
     fn test_make_tenbet_bets_zero_pirates() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         assert!(nfc.make_tenbet_bets(0).is_err());
     }
 
     #[test]
     fn test_make_tenbet_bets_too_many_pirates() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         assert!(nfc.make_tenbet_bets(0x8888888).is_err());
     }
 
     #[test]
     fn test_bets_expected_return() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_max_ter_bets();
 
         assert!(bets.expected_return(&nfc) > 17.0);
@@ -731,7 +776,7 @@ mod tests {
 
     #[test]
     fn test_bets_net_expected() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_max_ter_bets();
 
         assert!(bets.net_expected(&nfc) > 56316.0);
@@ -739,7 +784,7 @@ mod tests {
 
     #[test]
     fn test_bets_net_expected_no_bet_amount() {
-        let mut nfc = make_test_nfc();
+        let mut nfc = cached_make_test_nfc();
         nfc.bet_amount = None;
         let bets = nfc.make_max_ter_bets();
 
@@ -748,7 +793,7 @@ mod tests {
 
     #[test]
     fn test_bets_set_bet_amounts() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let mut bets = nfc.make_max_ter_bets();
 
         let amounts = neofoodclub::bets::BetAmounts::from_amount(8000);
@@ -759,7 +804,7 @@ mod tests {
 
     #[test]
     fn test_bets_set_bet_amounts_zero() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let mut bets = nfc.make_max_ter_bets();
 
         let amounts = neofoodclub::bets::BetAmounts::from_amount(0);
@@ -822,7 +867,7 @@ mod tests {
 
     #[test]
     fn test_make_bets_from_binaries_with_duplicate() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_bets_from_binaries(vec![0x80000, 0x8000, 0x800, 0x80, 0x8, 0x80000]);
 
         assert_eq!(bets.len(), 6);
@@ -830,7 +875,7 @@ mod tests {
 
     #[test]
     fn test_make_bets_from_indices() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_bets_from_indices(vec![[0, 1, 2, 3, 4]]);
 
         assert_eq!(bets.len(), 1);
@@ -838,7 +883,7 @@ mod tests {
 
     #[test]
     fn test_nfc_copy() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let new_nfc = nfc.copy(None, None);
 
         assert_eq!(nfc.round(), new_nfc.round());
@@ -846,7 +891,7 @@ mod tests {
 
     #[test]
     fn test_max_ter_reverse() {
-        let mut nfc = make_test_nfc_from_url();
+        let mut nfc = cached_make_test_nfc_from_url();
 
         nfc.modifier = Modifier::new(ModifierFlags::REVERSE.bits(), None, None).unwrap();
         let bets = nfc.make_max_ter_bets();
@@ -870,7 +915,7 @@ mod tests {
 
     #[test]
     fn test_make_units_bets_20() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_units_bets(20);
 
         for odd in bets.unwrap().odds_values(&nfc) {
@@ -880,7 +925,7 @@ mod tests {
 
     #[test]
     fn test_make_units_bets_100() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_units_bets(100);
 
         for odd in bets.unwrap().odds_values(&nfc) {
@@ -890,7 +935,7 @@ mod tests {
 
     #[test]
     fn test_make_units_bets_300000() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_units_bets(300_000);
 
         assert!(bets.is_none());
@@ -898,7 +943,7 @@ mod tests {
 
     #[test]
     fn test_datetime() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let start = nfc.start().as_ref().unwrap();
 
         let dt = chrono::DateTime::parse_from_rfc3339(start)
@@ -949,7 +994,7 @@ mod tests {
         }
 
         let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None).unwrap();
-        let nfc = make_test_nfc_with_modifier(modifier);
+        let nfc = cached_make_test_nfc_with_modifier(modifier);
 
         assert_eq!(
             nfc.custom_odds(),
@@ -965,13 +1010,13 @@ mod tests {
 
     #[test]
     fn test_modifier_custom_time() {
-        let control_nfc = make_test_nfc();
+        let control_nfc = cached_make_test_nfc();
 
         let time = NaiveTime::parse_from_str("12:00:00", "%H:%M:%S").unwrap();
 
         let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time)).unwrap();
 
-        let nfc = make_test_nfc_with_modifier(modifier);
+        let nfc = cached_make_test_nfc_with_modifier(modifier);
 
         let modified_length = nfc.changes().as_ref().unwrap().len();
 
@@ -986,7 +1031,7 @@ mod tests {
 
         let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time)).unwrap();
 
-        let nfc = make_test_nfc_with_modifier(modifier);
+        let nfc = cached_make_test_nfc_with_modifier(modifier);
 
         assert!(nfc.changes().is_none());
     }
@@ -997,7 +1042,7 @@ mod tests {
 
         let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time)).unwrap();
 
-        let nfc = make_test_nfc_with_modifier(modifier);
+        let nfc = cached_make_test_nfc_with_modifier(modifier);
 
         assert_eq!(nfc.changes().as_ref().unwrap().len(), 4);
     }
@@ -1008,14 +1053,14 @@ mod tests {
 
         let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), None, Some(time)).unwrap();
 
-        let nfc = make_test_nfc_with_modifier(modifier);
+        let nfc = cached_make_test_nfc_with_modifier(modifier);
 
         assert_eq!(nfc.changes().as_ref().unwrap().len(), 14);
     }
 
     #[test]
     fn test_logit() {
-        let nfc = make_test_nfc_logit();
+        let nfc = cached_make_test_nfc_logit();
         let bets = nfc.make_best_gambit_bets();
 
         assert!(bets.is_gambit());
@@ -1023,7 +1068,7 @@ mod tests {
 
     #[test]
     fn test_last_change_with_timezones() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert_eq!(
             nfc.last_change_nst().unwrap().to_string(),
@@ -1038,7 +1083,7 @@ mod tests {
 
     #[test]
     fn test_timestamp_with_timezones() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert_eq!(
             nfc.timestamp_nst().unwrap().to_string(),
@@ -1053,7 +1098,7 @@ mod tests {
 
     #[test]
     fn test_start_with_timezones() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert_eq!(
             nfc.start_nst().unwrap().to_string(),
@@ -1068,7 +1113,7 @@ mod tests {
 
     #[test]
     fn test_timestamp() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert_eq!(
             nfc.timestamp().as_ref().unwrap(),
@@ -1078,7 +1123,7 @@ mod tests {
 
     #[test]
     fn test_last_change() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert_eq!(
             nfc.last_change().as_ref().unwrap(),
@@ -1088,7 +1133,7 @@ mod tests {
 
     #[test]
     fn test_opening_odds() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert_eq!(
             nfc.opening_odds(),
@@ -1104,7 +1149,7 @@ mod tests {
 
     #[test]
     fn test_pirates() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert_eq!(
             nfc.pirates(),
@@ -1120,7 +1165,7 @@ mod tests {
 
     #[test]
     fn test_modified() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let mut custom_odds = HashMap::<u8, u8>::new();
         custom_odds.insert(1, 13);
@@ -1143,7 +1188,7 @@ mod tests {
 
     #[test]
     fn test_to_json() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let json = nfc.to_json();
 
@@ -1167,7 +1212,7 @@ mod tests {
 
     #[test]
     fn test_odds_change_data() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let changes = nfc.changes().as_ref().unwrap();
         let odds_change = changes.first().unwrap();
@@ -1178,7 +1223,7 @@ mod tests {
 
     #[test]
     fn test_make_url_all_data() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = cached_bustproof_bets();
 
@@ -1190,7 +1235,7 @@ mod tests {
 
     #[test]
     fn test_make_url_all_data_no_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let url = nfc.make_url(None, true, false);
 
@@ -1199,7 +1244,7 @@ mod tests {
 
     #[test]
     fn test_make_all_max_ter_bets() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = nfc.make_all_max_ter_bets();
 
@@ -1208,7 +1253,7 @@ mod tests {
 
     #[test]
     fn test_is_outdated_lock() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         // our test data is from 2023-05-06
         // this is probably always going to be true
@@ -1217,7 +1262,7 @@ mod tests {
 
     #[test]
     fn test_bets_table() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = cached_bustproof_bets();
 
@@ -1250,7 +1295,7 @@ mod tests {
 
     #[test]
     fn test_bets_stats_table() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = cached_bustproof_bets();
 
@@ -1282,7 +1327,7 @@ mod tests {
 
     #[test]
     fn test_bets_stats_table_reverse_mer() {
-        let nfc = make_test_nfc_with_modifier(
+        let nfc = cached_make_test_nfc_with_modifier(
             Modifier::new(ModifierFlags::REVERSE.bits(), None, None).unwrap(),
         );
 
@@ -1340,7 +1385,7 @@ mod tests {
 
     #[test]
     fn test_set_bet_amounts_error() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let mut bets = nfc.make_max_ter_bets();
         let result = bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![None; 1])));
@@ -1350,7 +1395,7 @@ mod tests {
 
     #[test]
     fn test_is_guaranteed_win_none_bet_amounts() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let mut bets = cached_bustproof_bets();
         bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![
@@ -1369,7 +1414,7 @@ mod tests {
 
     #[test]
     fn test_is_guaranteed_win_negative_bet_amounts() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let mut bets = nfc.make_max_ter_bets();
         bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![Some(0); 10])))
@@ -1380,7 +1425,7 @@ mod tests {
 
     #[test]
     fn test_invalid_gambit() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = nfc.make_bets_from_binaries(vec![0x1]);
 
@@ -1389,7 +1434,7 @@ mod tests {
 
     #[test]
     fn test_most_likely_winner() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = nfc.make_bets_from_binaries(vec![0x1, 0x10]);
 
@@ -1398,7 +1443,7 @@ mod tests {
 
     #[test]
     fn test_best_odds() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = nfc.make_bets_from_binaries(vec![0x1, 0x11]);
 
@@ -1407,7 +1452,7 @@ mod tests {
 
     #[test]
     fn test_partial_rate() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         let bets = nfc.make_bets_from_binaries(vec![0x1, 0x20, 0x01248, 0x01244, 0x01240]);
 
@@ -1442,7 +1487,7 @@ mod tests {
     fn test_modifier_opening_odds() {
         let modifier = Modifier::new(ModifierFlags::OPENING_ODDS.bits(), None, None).unwrap();
 
-        let nfc = make_test_nfc_with_modifier(modifier);
+        let nfc = cached_make_test_nfc_with_modifier(modifier);
 
         assert_eq!(nfc.custom_odds(), nfc.opening_odds());
     }
@@ -1524,7 +1569,7 @@ mod tests {
 
     #[test]
     fn test_bustproof_with_one_positive() {
-        let nfc = make_test_nfc_from_url();
+        let nfc = cached_make_test_nfc_from_url();
         let bets = nfc.make_bustproof_bets().unwrap();
 
         assert!(bets.is_guaranteed_win(&nfc));
@@ -1542,7 +1587,7 @@ mod tests {
 
         let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None).unwrap();
 
-        let nfc = make_test_nfc_from_url_with_modifier(modifier);
+        let nfc = cached_make_test_nfc_from_url_with_modifier(modifier);
 
         let arenas = nfc.get_arenas();
         assert_eq!(arenas.get_pirate_by_id(19).unwrap().current_odds, 4);
@@ -1567,7 +1612,7 @@ mod tests {
 
         let modifier = Modifier::new(ModifierFlags::EMPTY.bits(), Some(custom_odds), None).unwrap();
 
-        let nfc = make_test_nfc_from_url_with_modifier(modifier);
+        let nfc = cached_make_test_nfc_from_url_with_modifier(modifier);
 
         let bets = nfc.make_bustproof_bets();
 
@@ -1583,7 +1628,7 @@ mod tests {
             custom_odds
         };
 
-        let mut nfc = make_test_nfc();
+        let mut nfc = cached_make_test_nfc();
 
         assert!(nfc.modifier.is_empty());
 
@@ -1631,7 +1676,7 @@ mod tests {
 
     #[test]
     fn test_mer_and_gmer_not_equal() {
-        let mut nfc = make_test_nfc();
+        let mut nfc = cached_make_test_nfc();
 
         let mer = nfc.make_max_ter_bets();
         let gmer = nfc
@@ -1647,7 +1692,7 @@ mod tests {
 
     #[test]
     fn test_mer_and_omer_not_equal() {
-        let mut nfc = make_test_nfc();
+        let mut nfc = cached_make_test_nfc();
 
         let mer = nfc.make_max_ter_bets();
 
@@ -1666,7 +1711,7 @@ mod tests {
 
     #[test]
     fn test_odds_bust_some() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_bets_from_binaries(vec![0x11111]);
 
         let bust = bets.odds.bust();
@@ -1675,7 +1720,7 @@ mod tests {
 
     #[test]
     fn test_odds_chances() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let bets = nfc.make_bets_from_binaries(vec![0x1, 0x2]);
 
         let chances = bets.odds.chances();
@@ -1684,7 +1729,7 @@ mod tests {
 
     #[test]
     fn test_round_data_timestamps() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         assert!(nfc.round_data.start_nst().is_some());
         assert!(nfc.round_data.last_change_nst().is_some());
@@ -1696,7 +1741,7 @@ mod tests {
 
     #[test]
     fn test_odds_change_methods() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let changes = nfc.round_data.changes.as_ref().unwrap();
         let first_change = &changes[0];
 
@@ -1732,7 +1777,7 @@ mod tests {
     fn test_pirate_methods() {
         use neofoodclub::pirates::PartialPirateThings;
 
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let pirate = nfc.get_arenas().arenas[0].pirates[0];
 
         assert!(pirate.binary() > 0);
@@ -1756,7 +1801,7 @@ mod tests {
 
     #[test]
     fn test_arena_methods() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let arena = &nfc.get_arenas().arenas[0];
 
         assert_eq!(arena.get_name(), "Shipwreck");
@@ -1769,7 +1814,7 @@ mod tests {
 
     #[test]
     fn test_arenas_collection_methods() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let arenas = nfc.get_arenas();
 
         assert!(arenas.get_pirate_by_id(1).is_some());
@@ -1853,7 +1898,7 @@ mod tests {
     fn test_bets_methods() {
         use neofoodclub::bets::Bets;
 
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
 
         // Test construction methods
         let bets = Bets::try_new(&nfc, vec![1, 2, 3], BetAmounts::AllSame(5000));
@@ -1956,7 +2001,7 @@ mod panic_tests {
         bets::BetAmounts, modifier::Modifier, nfc::NeoFoodClub, round_data::RoundData,
     };
 
-    use crate::{make_test_nfc, ROUND_DATA_JSON};
+    use crate::{cached_make_test_nfc, ROUND_DATA_JSON};
 
     fn get_valid_round_data() -> RoundData {
         serde_json::from_str(ROUND_DATA_JSON).unwrap()
@@ -2000,7 +2045,7 @@ mod panic_tests {
 
     #[test]
     fn test_set_bet_amounts_error_len() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let mut bets = nfc.make_crazy_bets();
         // AllSame never causes an error, so use Amounts instead
         let amounts = BetAmounts::Amounts(vec![Some(100); 5]);
@@ -2014,7 +2059,7 @@ mod panic_tests {
 
     #[test]
     fn test_set_bet_amounts_allsame_never_errors() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let mut bets = nfc.make_crazy_bets();
         // AllSame should never cause an error, regardless of bet count
         let amounts = BetAmounts::AllSame(5000);
@@ -2026,7 +2071,7 @@ mod panic_tests {
 
     #[test]
     fn test_bets_new_with_amount() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let indices: Vec<usize> = (0..10).collect();
 
         // new_with_amount should never return an error
@@ -2038,7 +2083,7 @@ mod panic_tests {
 
     #[test]
     fn test_bets_new_with_amount_none() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let indices: Vec<usize> = (0..10).collect();
 
         // new_with_amount with None should create bets with no amounts
@@ -2083,14 +2128,14 @@ mod panic_tests {
     #[test]
     #[should_panic(expected = "Pirates binary must have 5 pirates.")]
     fn test_make_gambit_bets_panic() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         let _ = nfc.make_gambit_bets(0b1);
     }
 
     #[test]
     #[should_panic(expected = "You can only pick 1 pirate per arena.")]
     fn test_make_tenbet_bets_panic() {
-        let nfc = make_test_nfc();
+        let nfc = cached_make_test_nfc();
         nfc.make_tenbet_bets(0b11).unwrap();
     }
 
