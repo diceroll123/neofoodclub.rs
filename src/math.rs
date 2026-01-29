@@ -234,23 +234,37 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
         )
     };
 
-    let bytes = amounts_hash.as_bytes();
-    let mut out = Vec::with_capacity((bytes.len() + 2).div_ceil(3));
-
-    // Fast path for the common case (hash length is a multiple of 3).
-    let mut chunks = bytes.chunks_exact(3);
-    for chunk in &mut chunks {
-        let i0 = decode_index(chunk[0]).ok_or_else(invalid_err)?;
-        let i1 = decode_index(chunk[1]).ok_or_else(invalid_err)?;
-        let i2 = decode_index(chunk[2]).ok_or_else(invalid_err)?;
-
-        let value = (i0 * 52 + i1) * 52 + i2;
+    #[inline]
+    fn push_decoded(out: &mut Vec<Option<u32>>, value: u32) {
         let decoded = value.saturating_sub(BET_AMOUNT_MAX);
         out.push(if decoded >= BET_AMOUNT_MIN {
             Some(decoded)
         } else {
             None
         });
+    }
+
+    let bytes = amounts_hash.as_bytes();
+    let mut out = Vec::with_capacity((bytes.len() + 2).div_ceil(3));
+
+    // validates and decodes, pushing every 3 chars; handles remainder naturally.
+    let mut value = 0_u32;
+    let mut n = 0_u8;
+
+    for &b in bytes {
+        let idx = decode_index(b).ok_or_else(invalid_err)?;
+        value = value * 52 + idx;
+        n += 1;
+
+        if n == 3 {
+            push_decoded(&mut out, value);
+            value = 0;
+            n = 0;
+        }
+    }
+
+    if n != 0 {
+        push_decoded(&mut out, value);
     }
 
     Ok(out)
