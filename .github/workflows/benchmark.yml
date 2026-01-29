@@ -106,23 +106,20 @@ jobs:
             [ -z "$test_name" ] && continue
             echo "Benchmarking: $test_name"
 
-            # Create wrapper scripts to avoid quoting issues
-            echo "#!/bin/bash" > run_base.sh
-            echo "exec '$BASE_BIN' --exact '$test_name' --test-threads=1" >> run_base.sh
-            chmod +x run_base.sh
-
-            echo "#!/bin/bash" > run_pr.sh
-            echo "exec '$PR_BIN' --exact '$test_name' --test-threads=1" >> run_pr.sh
-            chmod +x run_pr.sh
+            # Run the test binaries directly (no wrapper script / no shell startup).
+            # This avoids hyperfine's <5ms warning due to shell startup overhead.
+            BASE_CMD="$BASE_BIN --exact \"$test_name\" --test-threads=1"
+            PR_CMD="$PR_BIN --exact \"$test_name\" --test-threads=1"
 
             # Run hyperfine for this specific test
             if ! hyperfine \
+              -N \
               --warmup 2 \
               --min-runs $MIN_RUNS \
               --export-json "bench-result.json" \
               --style none \
-              -n "base" "./run_base.sh" \
-              -n "pr" "./run_pr.sh" 2>&1; then
+              -n "base" "$BASE_CMD" \
+              -n "pr" "$PR_CMD" 2>&1; then
               echo "  Failed to benchmark $test_name"
               continue
             fi
