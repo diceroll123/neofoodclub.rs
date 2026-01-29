@@ -109,7 +109,7 @@ pub fn amounts_hash_check(amounts_hash: &str) -> Result<(), String> {
     if !amounts_hash
         .as_bytes()
         .iter()
-        .all(|&b| matches!(b, b'a'..=b'z' | b'A'..=b'Z'))
+        .all(|&b| b.is_ascii_alphabetic())
     {
         return Err(format!(
             "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
