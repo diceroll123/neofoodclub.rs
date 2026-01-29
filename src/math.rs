@@ -22,7 +22,6 @@ const PIR_IB: [u32; 4] = [0x88888, 0x44444, 0x22222, 0x11111];
 // 0xFFFFF = 0b11111111111111111111 (20 '1's), will accept all pirates
 const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
 
-static VALID_AMOUNT_HASH_REGEX: OnceLock<regex::Regex> = OnceLock::new();
 static VALID_BETS_HASH_REGEX: OnceLock<regex::Regex> = OnceLock::new();
 
 /// ```
@@ -186,7 +185,8 @@ pub fn bets_hash_to_bets_count(bets_hash: &str) -> Result<usize, String> {
 /// ```
 #[inline]
 pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
-    let mut result = vec!['\0'; bet_amounts.len() * 3];
+    // Build as ASCII bytes directly; avoids `Vec<char>` + UTF-8 re-encoding on collect.
+    let mut result = vec![0_u8; bet_amounts.len() * 3];
     let mut index = result.len();
 
     for &value in bet_amounts.iter().rev() {
@@ -198,14 +198,15 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
             state /= 52;
 
             result[index] = if letter_index < 26 {
-                (letter_index + b'a') as char
+                letter_index + b'a'
             } else {
-                (letter_index + b'A' - 26) as char
+                (letter_index - 26) + b'A'
             };
         }
     }
 
-    result.iter().collect()
+    // Safety: we only write ASCII [a-zA-Z] bytes.
+    unsafe { String::from_utf8_unchecked(result) }
 }
 
 /// Returns the bet amounts from a given bet amounts hash.
@@ -219,38 +220,59 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
 /// ```
 #[inline]
 pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>>, String> {
-    // check that the hash matches regex "^[a-zA-Z]*$" using regex
-    let valid_hash_regex =
-        VALID_AMOUNT_HASH_REGEX.get_or_init(|| regex::Regex::new("^[a-zA-Z]*$").unwrap());
-
-    // Check that the hash matches the regex
-    if !valid_hash_regex.is_match(amounts_hash) {
-        return Err(format!(
-            "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
-            amounts_hash
-        ));
+    #[inline]
+    fn decode_index(byte: u8) -> Option<u32> {
+        match byte {
+            b'a'..=b'z' => Some((byte - b'a') as u32),
+            b'A'..=b'Z' => Some((byte - b'A' + 26) as u32),
+            _ => None,
+        }
     }
 
-    Ok(amounts_hash
-        .as_bytes()
-        .chunks(3)
-        .map(|chunk| {
-            let mut value = 0_u32;
+    let invalid_err = || {
+        format!(
+            "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
+            amounts_hash
+        )
+    };
 
-            for &byte in chunk {
-                value *= 52;
-                let index = if let b'a'..=b'z' = byte {
-                    (byte - b'a') as u32
-                } else {
-                    (byte - b'A' + 26) as u32
-                };
-                value += index;
-            }
+    let bytes = amounts_hash.as_bytes();
+    let mut out = Vec::with_capacity((bytes.len() + 2) / 3);
 
-            let value = value.saturating_sub(BET_AMOUNT_MAX);
-            Some(value).filter(|&v| v >= BET_AMOUNT_MIN)
-        })
-        .collect())
+    // Fast path for the common case (hash length is a multiple of 3).
+    let mut chunks = bytes.chunks_exact(3);
+    for chunk in &mut chunks {
+        let i0 = decode_index(chunk[0]).ok_or_else(invalid_err)?;
+        let i1 = decode_index(chunk[1]).ok_or_else(invalid_err)?;
+        let i2 = decode_index(chunk[2]).ok_or_else(invalid_err)?;
+
+        let value = (i0 * 52 + i1) * 52 + i2;
+        let decoded = value.saturating_sub(BET_AMOUNT_MAX);
+        out.push(if decoded >= BET_AMOUNT_MIN {
+            Some(decoded)
+        } else {
+            None
+        });
+    }
+
+    // Preserve existing behavior for non-multiple-of-3 input lengths.
+    let rem = chunks.remainder();
+    if !rem.is_empty() {
+        let mut value = 0_u32;
+        for &b in rem {
+            let idx = decode_index(b).ok_or_else(invalid_err)?;
+            value = value * 52 + idx;
+        }
+
+        let decoded = value.saturating_sub(BET_AMOUNT_MAX);
+        out.push(if decoded >= BET_AMOUNT_MIN {
+            Some(decoded)
+        } else {
+            None
+        });
+    }
+
+    Ok(out)
 }
 
 /// Returns the bet binaries from a given bet hash.
