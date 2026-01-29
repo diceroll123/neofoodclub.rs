@@ -398,13 +398,13 @@ impl NeoFoodClub {
     }
 
     /// Returns the maximum TER values we'll use.
-    pub fn max_ters(&self) -> &Vec<f64> {
+    pub fn max_ters(&self) -> &[f64] {
         let general = self.modifier.is_general();
         let data = self.round_dict_data();
 
         if let Some(bet_amount) = self.bet_amount {
             if general {
-                return &data.ers;
+                return &*data.ers;
             }
 
             // if there's a bet amount, we use Net Expected instead of Expected Return
@@ -427,7 +427,7 @@ impl NeoFoodClub {
             });
             new_ers
         } else {
-            &data.ers
+            &*data.ers
         }
     }
 
@@ -454,7 +454,7 @@ impl NeoFoodClub {
         let data = self.round_dict_data();
         let odds = &data.odds;
 
-        let mut indices = argsort_slice_3124(odds, |a: &u32, b: &u32| a.cmp(b));
+        let mut indices = argsort_slice_3124(&**odds, |a: &u32, b: &u32| a.cmp(b));
 
         if descending {
             indices.reverse();
@@ -470,7 +470,8 @@ impl NeoFoodClub {
         let data = self.round_dict_data();
         let probs = &data.probs;
 
-        let mut indices = argsort_slice_3124(probs, |a: &f64, b: &f64| a.partial_cmp(b).unwrap());
+        let mut indices =
+            argsort_slice_3124(&**probs, |a: &f64, b: &f64| a.partial_cmp(b).unwrap());
 
         if descending {
             indices.reverse();
