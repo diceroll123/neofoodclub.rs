@@ -507,3 +507,34 @@ pub fn build_chance_objects(
     }
     chances
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn amounts_hash_check_accepts_multiple_of_three_ascii_letters() {
+        assert!(amounts_hash_check("").is_ok());
+        assert!(amounts_hash_check("AaY").is_ok());
+        assert!(amounts_hash_check("AaYAaY").is_ok());
+        assert!(amounts_hash_check("abcDEF").is_ok());
+    }
+
+    #[test]
+    fn amounts_hash_check_rejects_length_not_multiple_of_three() {
+        let err = amounts_hash_check("Aa").unwrap_err();
+        assert_eq!(
+            err,
+            "Invalid amounts hash 'Aa'. Length must be a multiple of 3."
+        );
+    }
+
+    #[test]
+    fn amounts_hash_check_rejects_non_alphabetic_characters() {
+        let err = amounts_hash_check("Aa1").unwrap_err();
+        assert_eq!(
+            err,
+            "Invalid amounts hash 'Aa1'. Must contain only characters a-z and A-Z."
+        );
+    }
+}
