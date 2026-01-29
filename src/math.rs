@@ -3,7 +3,6 @@ use std::collections::{BTreeMap, HashMap};
 use rand::Rng;
 
 use crate::chance::Chance;
-use std::sync::OnceLock;
 
 pub const BET_AMOUNT_MIN: u32 = 1;
 pub const BET_AMOUNT_MAX: u32 = 70304;
@@ -21,8 +20,6 @@ const PIR_IB: [u32; 4] = [0x88888, 0x44444, 0x22222, 0x11111];
 
 // 0xFFFFF = 0b11111111111111111111 (20 '1's), will accept all pirates
 const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
-
-static VALID_BETS_HASH_REGEX: OnceLock<regex::Regex> = OnceLock::new();
 
 /// ```
 /// let bin = neofoodclub::math::pirate_binary(3, 2);
@@ -87,10 +84,11 @@ pub fn binary_to_indices(binary: u32) -> [u8; 5] {
 
 #[inline]
 pub fn bets_hash_regex_check(bets_hash: &str) -> Result<(), String> {
-    let valid_bets_hash_regex =
-        VALID_BETS_HASH_REGEX.get_or_init(|| regex::Regex::new("^[a-y]*$").unwrap());
-
-    if !valid_bets_hash_regex.is_match(bets_hash) {
+    if !bets_hash
+        .as_bytes()
+        .iter()
+        .all(|&b| matches!(b, b'a'..=b'y'))
+    {
         return Err(format!(
             "Invalid bet hash '{}'. Must contain only characters a-y.",
             bets_hash
@@ -237,7 +235,7 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
     };
 
     let bytes = amounts_hash.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len().div_ceil(3));
+    let mut out = Vec::with_capacity((bytes.len() + 2).div_ceil(3));
 
     // Fast path for the common case (hash length is a multiple of 3).
     let mut chunks = bytes.chunks_exact(3);
