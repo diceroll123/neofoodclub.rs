@@ -10,7 +10,7 @@ use crate::math::{
 use crate::modifier::{Modifier, ModifierFlags};
 use crate::oddschange::OddsChange;
 use crate::round_data::RoundData;
-use crate::utils::{argsort_3124, argsort_slice_3124, get_dst_offset};
+use crate::utils::{argsort_slice_3124, get_dst_offset};
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use itertools::Itertools;
@@ -454,7 +454,7 @@ impl NeoFoodClub {
         let data = self.round_dict_data();
         let odds = &data.odds;
 
-        let mut indices = argsort_3124(odds, |a: &u32, b: &u32| a.cmp(b));
+        let mut indices = argsort_slice_3124(odds, |a: &u32, b: &u32| a.cmp(b));
 
         if descending {
             indices.reverse();
@@ -470,7 +470,7 @@ impl NeoFoodClub {
         let data = self.round_dict_data();
         let probs = &data.probs;
 
-        let mut indices = argsort_3124(probs, |a: &f64, b: &f64| a.partial_cmp(b).unwrap());
+        let mut indices = argsort_slice_3124(probs, |a: &f64, b: &f64| a.partial_cmp(b).unwrap());
 
         if descending {
             indices.reverse();
