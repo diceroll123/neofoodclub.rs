@@ -434,6 +434,7 @@ pub struct RoundDictData {
     pub maxbets: Box<[u32; 3124]>,
 }
 
+#[cfg_attr(coverage_nightly, coverage(off))]
 const fn build_round_data() -> [([usize; 5], u32); 3124] {
     let mut result = [([0usize; 5], 0u32); 3124];
     let mut i: u16 = 1;
