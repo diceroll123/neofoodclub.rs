@@ -37,20 +37,36 @@ jobs:
 
       - name: Build tests (both branches)
         run: |
-          cd pr
+          cd $GITHUB_WORKSPACE/pr
           cargo test --no-run 2>&1
-          find target/debug/deps -maxdepth 1 -name 'integration_test-*' -type f -executable | head -1 > ../pr-test-binary.txt
 
-          cd ../base
+          echo "Looking for test binaries in PR..."
+          find $GITHUB_WORKSPACE/pr/target/debug/deps -maxdepth 1 -type f -executable -name '*-*' | head -20
+
+          # Try integration_test first, then neofoodclub, then any test binary
+          PR_BIN=$(find $GITHUB_WORKSPACE/pr/target/debug/deps -maxdepth 1 -name 'integration_test-*' -type f -executable 2>/dev/null | head -1)
+          if [ -z "$PR_BIN" ]; then
+            PR_BIN=$(find $GITHUB_WORKSPACE/pr/target/debug/deps -maxdepth 1 -name 'neofoodclub-*' -type f -executable 2>/dev/null | head -1)
+          fi
+          echo "$PR_BIN" > $GITHUB_WORKSPACE/pr-test-binary.txt
+          echo "PR binary: $PR_BIN"
+
+          cd $GITHUB_WORKSPACE/base
           cargo test --no-run 2>&1
-          find target/debug/deps -maxdepth 1 -name 'integration_test-*' -type f -executable | head -1 > ../base-test-binary.txt
 
-          echo "PR binary: $(cat ../pr-test-binary.txt)"
-          echo "Base binary: $(cat ../base-test-binary.txt)"
+          echo "Looking for test binaries in base..."
+          find $GITHUB_WORKSPACE/base/target/debug/deps -maxdepth 1 -type f -executable -name '*-*' | head -20
+
+          BASE_BIN=$(find $GITHUB_WORKSPACE/base/target/debug/deps -maxdepth 1 -name 'integration_test-*' -type f -executable 2>/dev/null | head -1)
+          if [ -z "$BASE_BIN" ]; then
+            BASE_BIN=$(find $GITHUB_WORKSPACE/base/target/debug/deps -maxdepth 1 -name 'neofoodclub-*' -type f -executable 2>/dev/null | head -1)
+          fi
+          echo "$BASE_BIN" > $GITHUB_WORKSPACE/base-test-binary.txt
+          echo "Base binary: $BASE_BIN"
 
       - name: Get test list
         run: |
-          PR_BIN=$(cat pr-test-binary.txt)
+          PR_BIN=$(cat $GITHUB_WORKSPACE/pr-test-binary.txt)
           echo "Using PR binary: $PR_BIN"
 
           # Get list of all tests (excluding benchmarks)
@@ -60,11 +76,21 @@ jobs:
           echo "Found $(wc -l < test-names.txt) tests:"
           head -20 test-names.txt
 
+          # Debug: show if file is empty
+          if [ ! -s test-names.txt ]; then
+            echo "WARNING: test-names.txt is empty!"
+            echo "Raw test list output:"
+            cat test-list-raw.txt
+          fi
+
       - name: Benchmark each test
         shell: bash
         run: |
-          PR_BIN=$(cat pr-test-binary.txt)
-          BASE_BIN=$(cat base-test-binary.txt)
+          PR_BIN=$(cat $GITHUB_WORKSPACE/pr-test-binary.txt)
+          BASE_BIN=$(cat $GITHUB_WORKSPACE/base-test-binary.txt)
+
+          echo "PR binary: $PR_BIN"
+          echo "Base binary: $BASE_BIN"
 
           echo "## Test Benchmark Comparison" > comparison.md
           echo "" >> comparison.md
