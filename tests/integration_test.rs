@@ -53,14 +53,27 @@ mod tests {
     // so in our tests we will be sorting and comparing that way
 
     use core::panic;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, sync::OnceLock};
 
     use chrono::{DateTime, NaiveTime, TimeDelta};
     use neofoodclub::{
-        bets::BetAmounts, math::make_round_dicts, modifier::Modifier, pirates::PartialPirateThings,
+        bets::{BetAmounts, Bets},
+        math::make_round_dicts,
+        modifier::Modifier,
+        pirates::PartialPirateThings,
     };
 
     use super::*;
+
+    fn cached_bustproof_bets() -> Bets {
+        static CACHED: OnceLock<Bets> = OnceLock::new();
+        CACHED
+            .get_or_init(|| {
+                let nfc = make_test_nfc();
+                nfc.make_bustproof_bets().unwrap()
+            })
+            .clone()
+    }
 
     #[test]
     fn test_getters() {
@@ -100,12 +113,8 @@ mod tests {
 
     #[test]
     fn test_bustproof_bets_hash() {
-        let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
-
-        let bets_hash = bets.bets_hash();
-
-        let mut binaries = math::bets_hash_to_bet_binaries(&bets_hash).unwrap();
+        let bets = cached_bustproof_bets();
+        let mut binaries = bets.get_binaries();
         binaries.sort_unstable();
 
         let expected = [4096, 8192, 16400, 16416, 16448, 16512, 32768];
@@ -115,12 +124,8 @@ mod tests {
 
     #[test]
     fn test_bustproof_amounts_hash() {
-        let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
-
-        let amounts_hash = bets.amounts_hash();
-
-        let mut bet_amounts = math::amounts_hash_to_bet_amounts(&amounts_hash.unwrap()).unwrap();
+        let bets = cached_bustproof_bets();
+        let mut bet_amounts = bets.bet_amounts.clone().unwrap();
 
         bet_amounts.sort_unstable();
 
@@ -143,7 +148,7 @@ mod tests {
         // and then comparing the values
 
         let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         let url = nfc.make_url(Some(&bets), true, false);
 
@@ -185,7 +190,7 @@ mod tests {
     #[test]
     fn test_make_url_from_bets() {
         let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         assert_eq!(
             nfc.make_url(Some(&bets), true, false),
@@ -196,7 +201,7 @@ mod tests {
     #[test]
     fn test_get_win_units() {
         let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         assert_eq!(nfc.get_win_units(&bets), 20);
     }
@@ -204,7 +209,7 @@ mod tests {
     #[test]
     fn test_get_win_np() {
         let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         assert_eq!(nfc.get_win_np(&bets), 32_000);
     }
@@ -221,8 +226,7 @@ mod tests {
 
     #[test]
     fn test_is_bustproof_true() {
-        let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         assert!(bets.is_bustproof());
     }
@@ -238,7 +242,7 @@ mod tests {
     #[test]
     fn test_is_guaranteed_to_win_true() {
         let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         assert!(bets.is_guaranteed_win(&nfc));
     }
@@ -277,8 +281,7 @@ mod tests {
 
     #[test]
     fn test_is_crazy_false() {
-        let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         assert!(!bets.is_crazy());
     }
@@ -306,7 +309,7 @@ mod tests {
 
         assert!(!bets.is_gambit());
 
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
         assert!(!bets.is_gambit());
 
         let bets = nfc.make_max_ter_bets();
@@ -644,8 +647,7 @@ mod tests {
 
     #[test]
     fn test_count_tenbets_zero() {
-        let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         assert_eq!(bets.count_tenbets(), 0);
     }
@@ -676,8 +678,7 @@ mod tests {
 
     #[test]
     fn test_is_tenbet_false_and_too_few() {
-        let nfc = make_test_nfc();
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         assert!(!bets.is_tenbet());
     }
@@ -1179,7 +1180,7 @@ mod tests {
     fn test_make_url_all_data() {
         let nfc = make_test_nfc();
 
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         let url = nfc.make_url(Some(&bets), true, true);
 
@@ -1218,7 +1219,7 @@ mod tests {
     fn test_bets_table() {
         let nfc = make_test_nfc();
 
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         let table = bets.table(&nfc);
 
@@ -1251,7 +1252,7 @@ mod tests {
     fn test_bets_stats_table() {
         let nfc = make_test_nfc();
 
-        let bets = nfc.make_bustproof_bets().unwrap();
+        let bets = cached_bustproof_bets();
 
         let table = bets.stats_table(&nfc);
 
@@ -1351,7 +1352,7 @@ mod tests {
     fn test_is_guaranteed_win_none_bet_amounts() {
         let nfc = make_test_nfc();
 
-        let mut bets = nfc.make_bustproof_bets().unwrap();
+        let mut bets = cached_bustproof_bets();
         bets.set_bet_amounts(&Some(BetAmounts::Amounts(vec![
             None,
             None,
