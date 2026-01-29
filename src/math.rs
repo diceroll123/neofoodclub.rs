@@ -25,7 +25,7 @@ const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
 /// let bin = neofoodclub::math::pirate_binary(3, 2);
 /// assert_eq!(bin, 0x200);
 /// ```
-#[inline]
+#[inline(always)]
 pub fn pirate_binary(index: u8, arena: u8) -> u32 {
     match index {
         1..=4 => 0x80000 >> ((index - 1) + arena * 4),
@@ -37,7 +37,7 @@ pub fn pirate_binary(index: u8, arena: u8) -> u32 {
 /// let bin = neofoodclub::math::pirates_binary([0, 1, 2, 3, 4]);
 /// assert_eq!(bin, 0x08421);
 /// ```
-#[inline]
+#[inline(always)]
 pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
     bets_indices
         .iter()
@@ -417,66 +417,141 @@ pub fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32>
 
 #[derive(Debug, Clone)]
 pub struct RoundDictData {
-    pub bins: Vec<u32>,
-    pub probs: Vec<f64>,
-    pub odds: Vec<u32>,
-    pub ers: Vec<f64>,
-    pub maxbets: Vec<u32>,
+    pub bins: Box<[u32; 3124]>,
+    pub probs: Box<[f64; 3124]>,
+    pub odds: Box<[u32; 3124]>,
+    pub ers: Box<[f64; 3124]>,
+    pub maxbets: Box<[u32; 3124]>,
+}
+
+/// Precomputed data for all 3124 index combinations: (indices as usize, binary)
+static ROUND_DATA: OnceLock<[([usize; 5], u32); 3124]> = OnceLock::new();
+
+fn get_round_data() -> &'static [([usize; 5], u32); 3124] {
+    ROUND_DATA.get_or_init(|| {
+        let mut result = [([0usize; 5], 0u32); 3124];
+        for (idx, i) in (1u16..3125).enumerate() {
+            let indices_u8 = [
+                (i / 625) as u8,
+                ((i / 125) % 5) as u8,
+                ((i / 25) % 5) as u8,
+                ((i / 5) % 5) as u8,
+                (i % 5) as u8,
+            ];
+            let indices_usize = [
+                indices_u8[0] as usize,
+                indices_u8[1] as usize,
+                indices_u8[2] as usize,
+                indices_u8[3] as usize,
+                indices_u8[4] as usize,
+            ];
+            result[idx] = (indices_usize, pirates_binary(indices_u8));
+        }
+        result
+    })
 }
 
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
-    let mut bins: Vec<u32> = Vec::with_capacity(3124);
-    let mut probs: Vec<f64> = Vec::with_capacity(3124);
-    let mut odds_vec: Vec<u32> = Vec::with_capacity(3124);
-    let mut ers: Vec<f64> = Vec::with_capacity(3124);
-    let mut maxbets: Vec<u32> = Vec::with_capacity(3124);
+    use std::mem::MaybeUninit;
 
-    for a in 0..5 {
-        for b in 0..5 {
-            for c in 0..5 {
-                for d in 0..5 {
-                    for e in 0..5 {
-                        if a == 0 && b == 0 && c == 0 && d == 0 && e == 0 {
-                            continue;
-                        }
+    // Convert odds u8->u32 once (stds[_][0] is already 1.0, odds[_][0] is already 1)
+    let odds_u32: [[u32; 5]; 5] = [
+        [
+            odds[0][0] as u32,
+            odds[0][1] as u32,
+            odds[0][2] as u32,
+            odds[0][3] as u32,
+            odds[0][4] as u32,
+        ],
+        [
+            odds[1][0] as u32,
+            odds[1][1] as u32,
+            odds[1][2] as u32,
+            odds[1][3] as u32,
+            odds[1][4] as u32,
+        ],
+        [
+            odds[2][0] as u32,
+            odds[2][1] as u32,
+            odds[2][2] as u32,
+            odds[2][3] as u32,
+            odds[2][4] as u32,
+        ],
+        [
+            odds[3][0] as u32,
+            odds[3][1] as u32,
+            odds[3][2] as u32,
+            odds[3][3] as u32,
+            odds[3][4] as u32,
+        ],
+        [
+            odds[4][0] as u32,
+            odds[4][1] as u32,
+            odds[4][2] as u32,
+            odds[4][3] as u32,
+            odds[4][4] as u32,
+        ],
+    ];
 
-                        let nums = [a, b, c, d, e];
-                        let total_bin: u32 = pirates_binary(nums);
+    let round_data = get_round_data();
 
-                        let (total_probs, total_odds) = nums.iter().enumerate().fold(
-                            (1.0, 1),
-                            |(probs, odds_fold), (arena, &index)| {
-                                if index == 0 {
-                                    (probs, odds_fold)
-                                } else {
-                                    (
-                                        probs * stds[arena][index as usize],
-                                        odds_fold * odds[arena][index as usize] as u32,
-                                    )
-                                }
-                            },
-                        );
+    // Use MaybeUninit to avoid zero-initialization (we write every element)
+    let mut bins: Box<[MaybeUninit<u32>; 3124]> = Box::new([const { MaybeUninit::uninit() }; 3124]);
+    let mut probs: Box<[MaybeUninit<f64>; 3124]> =
+        Box::new([const { MaybeUninit::uninit() }; 3124]);
+    let mut odds_vec: Box<[MaybeUninit<u32>; 3124]> =
+        Box::new([const { MaybeUninit::uninit() }; 3124]);
+    let mut ers: Box<[MaybeUninit<f64>; 3124]> = Box::new([const { MaybeUninit::uninit() }; 3124]);
+    let mut maxbets: Box<[MaybeUninit<u32>; 3124]> =
+        Box::new([const { MaybeUninit::uninit() }; 3124]);
 
-                        let er = total_probs * total_odds as f64;
-                        let maxbet = (1_000_000.0 / total_odds as f64).ceil() as u32;
+    // Process 4 items per iteration (3124 = 781 * 4)
+    // SAFETY: All indices are in bounds, indices i0-i4 are in range [0, 5)
+    unsafe {
+        for chunk in 0..781 {
+            let base = chunk * 4;
 
-                        bins.push(total_bin);
-                        probs.push(total_probs);
-                        odds_vec.push(total_odds);
-                        ers.push(er);
-                        maxbets.push(maxbet);
-                    }
-                }
+            for offset in 0..4 {
+                let idx = base + offset;
+                let (nums, bin) = round_data.get_unchecked(idx);
+                let [i0, i1, i2, i3, i4] = *nums;
+
+                bins.get_unchecked_mut(idx).write(*bin);
+
+                let total_probs = stds.get_unchecked(0).get_unchecked(i0)
+                    * stds.get_unchecked(1).get_unchecked(i1)
+                    * stds.get_unchecked(2).get_unchecked(i2)
+                    * stds.get_unchecked(3).get_unchecked(i3)
+                    * stds.get_unchecked(4).get_unchecked(i4);
+
+                let total_odds = odds_u32.get_unchecked(0).get_unchecked(i0)
+                    * odds_u32.get_unchecked(1).get_unchecked(i1)
+                    * odds_u32.get_unchecked(2).get_unchecked(i2)
+                    * odds_u32.get_unchecked(3).get_unchecked(i3)
+                    * odds_u32.get_unchecked(4).get_unchecked(i4);
+
+                let total_odds_f64 = total_odds as f64;
+
+                probs.get_unchecked_mut(idx).write(total_probs);
+                odds_vec.get_unchecked_mut(idx).write(total_odds);
+                ers.get_unchecked_mut(idx)
+                    .write(total_probs * total_odds_f64);
+                maxbets
+                    .get_unchecked_mut(idx)
+                    .write((1_000_000.0 / total_odds_f64).ceil() as u32);
             }
         }
     }
 
-    RoundDictData {
-        bins,
-        probs,
-        odds: odds_vec,
-        ers,
-        maxbets,
+    // SAFETY: All elements have been initialized. Transmute MaybeUninit<T> to T
+    unsafe {
+        RoundDictData {
+            bins: Box::from_raw(Box::into_raw(bins) as *mut [u32; 3124]),
+            probs: Box::from_raw(Box::into_raw(probs) as *mut [f64; 3124]),
+            odds: Box::from_raw(Box::into_raw(odds_vec) as *mut [u32; 3124]),
+            ers: Box::from_raw(Box::into_raw(ers) as *mut [f64; 3124]),
+            maxbets: Box::from_raw(Box::into_raw(maxbets) as *mut [u32; 3124]),
+        }
     }
 }
 

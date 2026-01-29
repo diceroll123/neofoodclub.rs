@@ -398,12 +398,12 @@ impl NeoFoodClub {
     }
 
     /// Returns the maximum TER values we'll use.
-    pub fn max_ters(&self) -> &Vec<f64> {
+    pub fn max_ters(&self) -> &[f64] {
         let general = self.modifier.is_general();
 
         if let Some(bet_amount) = self.bet_amount {
             if general {
-                return &self.round_dict_data().ers;
+                return &*self.round_dict_data().ers;
             }
 
             // if there's a bet amount, we use Net Expected instead of Expected Return
@@ -427,7 +427,7 @@ impl NeoFoodClub {
             });
             new_ers
         } else {
-            &self.round_dict_data().ers
+            &*self.round_dict_data().ers
         }
     }
 
@@ -451,7 +451,7 @@ impl NeoFoodClub {
     /// If `descending` is true, returns highest to lowest.
     /// If `descending` is false, returns lowest to highest.
     fn get_sorted_odds_indices(&self, descending: bool, amount: usize) -> Vec<usize> {
-        let odds = &self.round_dict_data().odds;
+        let odds = &*self.round_dict_data().odds;
 
         let mut indices = argsort_by(odds, &|a: &u32, b: &u32| a.cmp(b));
 
@@ -466,7 +466,7 @@ impl NeoFoodClub {
     /// If `descending` is true, returns highest to lowest.
     /// If `descending` is false, returns lowest to highest.
     fn get_sorted_probs_indices(&self, descending: bool, amount: usize) -> Vec<usize> {
-        let probs = &self.round_dict_data().probs;
+        let probs = &*self.round_dict_data().probs;
 
         let mut indices = argsort_by(probs, &|a: &f64, b: &f64| a.partial_cmp(b).unwrap());
 
