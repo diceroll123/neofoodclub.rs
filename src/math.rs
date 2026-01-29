@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use rand::Rng;
 
@@ -351,25 +351,19 @@ fn ib_doable(binary: u32) -> bool {
 }
 
 #[inline]
-fn ib_prob(binary: u32, probabilities: [[f64; 5]; 5]) -> f64 {
+fn ib_prob(binary: u32, probabilities: &[[f64; 5]; 5]) -> f64 {
     // computes the probability that the winning combination is accepted by ib
-    BIT_MASKS
-        .iter()
-        .enumerate()
-        .fold(1.0, |total_prob, (x, bit_mask)| {
-            let ar_prob: f64 = PIR_IB
-                .iter()
-                .enumerate()
-                .map(|(y, &pir_ib)| {
-                    if binary & bit_mask & pir_ib > 0 {
-                        probabilities[x][y + 1]
-                    } else {
-                        0.0
-                    }
-                })
-                .sum();
-            total_prob * ar_prob
-        })
+    let mut total_prob = 1.0;
+    for (x, &bit_mask) in BIT_MASKS.iter().enumerate() {
+        let mut ar_prob = 0.0;
+        for (y, &pir_ib) in PIR_IB.iter().enumerate() {
+            if (binary & bit_mask & pir_ib) != 0 {
+                ar_prob += probabilities[x][y + 1];
+            }
+        }
+        total_prob *= ar_prob;
+    }
+    total_prob
 }
 
 pub fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32> {
@@ -486,24 +480,30 @@ pub fn build_chance_objects(
     probabilities: [[f64; 5]; 5],
 ) -> Vec<Chance> {
     let expanded = expand_ib_object(bets, bet_odds);
-    let mut win_table: BTreeMap<u32, f64> = BTreeMap::new();
-    for (key, value) in expanded.iter() {
-        *win_table.entry(*value).or_insert(0.0) += ib_prob(*key, probabilities);
+
+    let mut win_table: HashMap<u32, f64> = HashMap::with_capacity(expanded.len());
+    for (&key, &value) in expanded.iter() {
+        let p = ib_prob(key, &probabilities);
+        *win_table.entry(value).or_insert(0.0) += p;
     }
+
+    let mut win_table: Vec<(u32, f64)> = win_table.into_iter().collect();
+    win_table.sort_unstable_by_key(|(value, _prob)| *value);
 
     let mut cumulative: f64 = 0.0;
     let mut tail: f64 = 1.0;
     let mut chances: Vec<Chance> = Vec::with_capacity(win_table.len());
-    for (key, value) in win_table.into_iter() {
-        cumulative += value;
+    for (value, probability) in win_table.into_iter() {
+        cumulative += probability;
+
         chances.push(Chance {
-            value: key,
-            probability: value,
+            value,
+            probability,
             cumulative,
             tail,
         });
 
-        tail -= value;
+        tail -= probability;
     }
     chances
 }
