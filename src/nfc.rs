@@ -10,7 +10,7 @@ use crate::math::{
 use crate::modifier::{Modifier, ModifierFlags};
 use crate::oddschange::OddsChange;
 use crate::round_data::RoundData;
-use crate::utils::{argsort_by, get_dst_offset};
+use crate::utils::{argsort_3124, argsort_slice_3124, get_dst_offset};
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use itertools::Itertools;
@@ -435,16 +435,16 @@ impl NeoFoodClub {
     fn max_ter_indices(&self) -> Vec<usize> {
         let use_ers = self.max_ters();
 
-        let mut binding = argsort_by(use_ers, &|a: &f64, b: &f64| a.total_cmp(b));
+        let mut indices = argsort_slice_3124(use_ers, |a: &f64, b: &f64| a.total_cmp(b));
 
         let reverse = self.modifier.is_reverse();
         // since it's reversed to begin with, we reverse it if
         // the modifier does not have the reverse flag
         if !reverse {
-            binding.reverse();
+            indices.reverse();
         }
 
-        binding
+        indices.to_vec()
     }
 
     /// Returns sorted indices of odds
@@ -454,13 +454,13 @@ impl NeoFoodClub {
         let data = self.round_dict_data();
         let odds = &data.odds;
 
-        let mut indices = argsort_by(odds, &|a: &u32, b: &u32| a.cmp(b));
+        let mut indices = argsort_3124(odds, |a: &u32, b: &u32| a.cmp(b));
 
         if descending {
             indices.reverse();
         }
 
-        indices.into_iter().take(amount).collect()
+        indices.iter().copied().take(amount).collect()
     }
 
     /// Returns sorted indices of probabilities
@@ -470,13 +470,13 @@ impl NeoFoodClub {
         let data = self.round_dict_data();
         let probs = &data.probs;
 
-        let mut indices = argsort_by(probs, &|a: &f64, b: &f64| a.partial_cmp(b).unwrap());
+        let mut indices = argsort_3124(probs, |a: &f64, b: &f64| a.partial_cmp(b).unwrap());
 
         if descending {
             indices.reverse();
         }
 
-        indices.into_iter().take(amount).collect()
+        indices.iter().copied().take(amount).collect()
     }
 
     /// Return the binary representation of the highest expected return full-arena bet.
