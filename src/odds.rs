@@ -15,14 +15,10 @@ pub struct Odds {
 
 impl Odds {
     pub fn new(nfc: &NeoFoodClub, array_indices: &[usize]) -> Self {
+        let data = nfc.round_dict_data();
         let (pirate_indices, odds_values): (Vec<[u8; 5]>, Vec<u32>) = array_indices
             .iter()
-            .map(|&index| {
-                (
-                    binary_to_indices(nfc.round_dict_data().bins[index]),
-                    nfc.round_dict_data().odds[index],
-                )
-            })
+            .map(|&index| (binary_to_indices(data.bins[index]), data.odds[index]))
             .unzip();
 
         let chances = build_chance_objects(&pirate_indices, &odds_values, nfc.probabilities());
