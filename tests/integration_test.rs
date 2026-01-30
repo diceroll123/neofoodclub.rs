@@ -57,7 +57,10 @@ mod tests {
 
     use chrono::{DateTime, NaiveTime, TimeDelta};
     use neofoodclub::{
-        bets::BetAmounts, math::make_round_dicts, modifier::Modifier, pirates::PartialPirateThings,
+        bets::BetAmounts,
+        math::{make_round_dicts, pirate_binary},
+        modifier::Modifier,
+        pirates::PartialPirateThings,
     };
 
     use super::*;
@@ -1800,6 +1803,32 @@ mod tests {
             vec![Some(50), Some(100), Some(150), Some(200), Some(250)]
         );
         assert!(amounts_hash_to_bet_amounts("invalid!").is_err());
+    }
+
+    #[test]
+    fn test_binary_to_indices() {
+        use neofoodclub::math::binary_to_indices;
+
+        for i in 0..4 {
+            for j in 0..4 {
+                for k in 0..4 {
+                    for l in 0..4 {
+                        for m in 0..4 {
+                            assert_eq!(
+                                binary_to_indices(
+                                    pirate_binary(i, 0)
+                                        | pirate_binary(j, 1)
+                                        | pirate_binary(k, 2)
+                                        | pirate_binary(l, 3)
+                                        | pirate_binary(m, 4)
+                                ),
+                                [i, j, k, l, m]
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
