@@ -68,19 +68,32 @@ jobs:
         run: |
           PR_BIN=$(cat $GITHUB_WORKSPACE/pr-test-binary.txt)
           echo "Using PR binary: $PR_BIN"
+          BASE_BIN=$(cat $GITHUB_WORKSPACE/base-test-binary.txt)
+          echo "Using base binary: $BASE_BIN"
 
           # Get list of all tests (excluding benchmarks)
           "$PR_BIN" --list 2>&1 | tee test-list-raw.txt
           grep ': test$' test-list-raw.txt | sed 's/: test$//' > test-names.txt
 
+          # Also get the base branch test list so we can detect "new tests"
+          "$BASE_BIN" --list 2>&1 | tee base-test-list-raw.txt
+          grep ': test$' base-test-list-raw.txt | sed 's/: test$//' > base-test-names.txt
+
           echo "Found $(wc -l < test-names.txt) tests:"
           head -20 test-names.txt
+          echo "Found $(wc -l < base-test-names.txt) base tests:"
+          head -20 base-test-names.txt
 
           # Debug: show if file is empty
           if [ ! -s test-names.txt ]; then
             echo "WARNING: test-names.txt is empty!"
             echo "Raw test list output:"
             cat test-list-raw.txt
+          fi
+          if [ ! -s base-test-names.txt ]; then
+            echo "WARNING: base-test-names.txt is empty!"
+            echo "Raw base test list output:"
+            cat base-test-list-raw.txt
           fi
 
       - name: Benchmark each test
@@ -107,6 +120,14 @@ jobs:
           while IFS= read -r test_name; do
             [ -z "$test_name" ] && continue
             echo "Benchmarking: $test_name"
+
+            # If the test doesn't exist on the base branch, don't time a misleading
+            # "0 matching tests" run. Record it as a new test and continue.
+            if ! grep -Fxq "$test_name" base-test-names.txt; then
+              echo "  New test (not present on base): $test_name"
+              echo "| \`$test_name\` | — | — | 🆕 new |" >> comparison.md
+              continue
+            fi
 
             # Run the test binaries directly (no wrapper script / no shell startup).
             # This avoids hyperfine's <5ms warning due to shell startup overhead.
