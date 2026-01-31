@@ -335,7 +335,8 @@ fn bench_fill_bet_amounts() {
     let nfc = NeoFoodClub::from_json(ROUND_DATA_JSON, Some(BET_AMOUNT), None, None);
     let mut bets = nfc.make_all_bets();
     bets.bet_amounts = None;
-    divan::black_box(bets.fill_bet_amounts(divan::black_box(&nfc)));
+    bets.fill_bet_amounts(divan::black_box(&nfc));
+    divan::black_box(&bets);
 }
 
 // Bet operation benchmarks
