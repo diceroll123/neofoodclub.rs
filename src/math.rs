@@ -25,11 +25,12 @@ const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
 /// let bin = neofoodclub::math::pirate_binary(3, 2);
 /// assert_eq!(bin, 0x200);
 /// ```
-#[inline]
+#[inline(always)]
 pub fn pirate_binary(index: u8, arena: u8) -> u32 {
-    match index {
-        1..=4 => 0x80000 >> ((index - 1) + arena * 4),
-        _ => 0,
+    if index >= 1 && index <= 4 {
+        0x80000 >> ((index - 1) + arena * 4)
+    } else {
+        0
     }
 }
 
@@ -68,7 +69,7 @@ pub fn random_full_pirates_binary() -> u32 {
 /// let indices = neofoodclub::math::binary_to_indices(1);
 /// assert_eq!(indices, [0, 0, 0, 0, 4]);
 /// ```
-#[inline]
+#[inline(always)]
 pub fn binary_to_indices(binary: u32) -> [u8; 5] {
     // Maps a 4-bit arena nibble to its pirate index.
     // Semantics match the previous implementation for all values 0..=15:
