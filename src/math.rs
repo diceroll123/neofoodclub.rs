@@ -519,7 +519,7 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
         Box::new([const { MaybeUninit::uninit() }; 3124]);
 
     // SAFETY: All indices are in bounds, indices i0-i4 are in range [0, 5).
-    let round_data = ROUND_DATA.get_or_init(|| build_round_data());
+    let round_data = ROUND_DATA.get_or_init(build_round_data);
     unsafe {
         for chunk in 0..781 {
             let base = chunk * 4;
