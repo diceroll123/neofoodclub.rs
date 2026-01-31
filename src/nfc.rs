@@ -846,13 +846,8 @@ impl NeoFoodClub {
         }
         let data = self.round_dict_data();
 
-        let round_dict_data = self.round_dict_data();
-        let bins = &round_dict_data.bins;
-        let odds = &round_dict_data.odds;
-
-        let round_dict_data = self.round_dict_data();
-        let bins = &round_dict_data.bins;
-        let odds = &round_dict_data.odds;
+        let bins = &data.bins;
+        let odds = &data.odds;
 
         bets.array_indices
             .iter()
