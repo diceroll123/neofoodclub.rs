@@ -142,17 +142,16 @@ pub fn amounts_hash_check(amounts_hash: &str) -> Result<(), String> {
 pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Result<Vec<[u8; 5]>, String> {
     bets_hash_check(bets_hash)?;
 
-    let indices: Vec<u8> = bets_hash.bytes().map(|byte| byte - b'a').collect();
+    // Pre-allocate output with exact capacity needed (2 values per hash char, rounded up to multiple of 5)
+    let raw_len = bets_hash.len() * 2;
+    let padded_len = raw_len.div_ceil(5) * 5;
+    let mut output = vec![0u8; padded_len];
 
-    let mut output: Vec<u8> = indices
-        .iter()
-        .flat_map(|&e| vec![(e as f64 / 5.0).floor() as u8, (e % 5)])
-        .collect();
-
-    // make sure the length is a multiple of 5
-    let difference = output.len() % 5;
-    if difference != 0 {
-        output.resize(output.len() + (5 - difference), 0);
+    // Decode directly using integer division (avoids float conversion)
+    for (i, byte) in bets_hash.bytes().enumerate() {
+        let e = byte - b'a';
+        output[i * 2] = e / 5; // integer division instead of float
+        output[i * 2 + 1] = e % 5;
     }
 
     // due to the way this algorithm works, there could be resulting chunks that are entirely all 0,
@@ -163,10 +162,11 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Result<Vec<[u8; 5]>, String>
     // --------------------------------------------------------------------------------------------------------------^ note the array containing all zeros
 
     Ok(output
-        .chunks(5)
+        .chunks_exact(5)
         .filter_map(|chunk| {
-            if chunk.iter().any(|&n| n > 0) {
-                Some(chunk.try_into().unwrap())
+            // Check if any value is non-zero using bitwise OR (faster than iterator)
+            if (chunk[0] | chunk[1] | chunk[2] | chunk[3] | chunk[4]) != 0 {
+                Some([chunk[0], chunk[1], chunk[2], chunk[3], chunk[4]])
             } else {
                 None
             }
