@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
+use std::sync::OnceLock;
 
 use rand::Rng;
 
@@ -438,7 +439,7 @@ pub struct RoundDictData {
     pub maxbets: Box<[u32; 3124]>,
 }
 
-const fn build_round_data() -> [([usize; 5], u32); 3124] {
+fn build_round_data() -> [([usize; 5], u32); 3124] {
     let mut result = [([0usize; 5], 0u32); 3124];
     let mut i: u16 = 1;
     while i < 3125 {
@@ -463,8 +464,7 @@ const fn build_round_data() -> [([usize; 5], u32); 3124] {
 
 /// Precomputed data for all 3124 index combinations: (indices as usize, binary).
 ///
-/// This is a `static` (not lazy) to avoid first-call initialization costs.
-static ROUND_DATA: [([usize; 5], u32); 3124] = build_round_data();
+static ROUND_DATA: OnceLock<[([usize; 5], u32); 3124]> = OnceLock::new();
 
 pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictData {
     use std::mem::MaybeUninit;
@@ -519,12 +519,13 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
         Box::new([const { MaybeUninit::uninit() }; 3124]);
 
     // SAFETY: All indices are in bounds, indices i0-i4 are in range [0, 5).
+    let round_data = ROUND_DATA.get_or_init(|| build_round_data());
     unsafe {
         for chunk in 0..781 {
             let base = chunk * 4;
             for offset in 0..4 {
                 let idx = base + offset;
-                let (nums, bin) = ROUND_DATA.get_unchecked(idx);
+                let (nums, bin) = round_data.get_unchecked(idx);
                 let [i0, i1, i2, i3, i4] = *nums;
 
                 bins.get_unchecked_mut(idx).write(*bin);
