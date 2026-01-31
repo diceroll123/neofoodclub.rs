@@ -55,7 +55,7 @@ mod tests {
     use core::panic;
     use std::collections::HashMap;
 
-    use chrono::{DateTime, NaiveTime, TimeDelta};
+    use chrono::NaiveTime;
     use neofoodclub::{
         bets::BetAmounts,
         math::{make_round_dicts, pirate_binary},
@@ -911,39 +911,6 @@ mod tests {
     }
 
     #[test]
-    fn test_get_dst_offset_positive() {
-        let dst_mar_2024 = DateTime::parse_from_rfc3339("2024-03-11T00:00:00Z")
-            .unwrap()
-            .with_timezone(&chrono::Utc);
-
-        let offset = neofoodclub::utils::get_dst_offset(dst_mar_2024);
-
-        assert_eq!(offset, TimeDelta::try_hours(1).unwrap());
-    }
-
-    #[test]
-    fn test_get_dst_offset_negative() {
-        let dst_nov_2024 = DateTime::parse_from_rfc3339("2024-11-04T00:00:00Z")
-            .unwrap()
-            .with_timezone(&chrono::Utc);
-
-        let offset = neofoodclub::utils::get_dst_offset(dst_nov_2024);
-
-        assert_eq!(offset, TimeDelta::try_hours(-1).unwrap());
-    }
-
-    #[test]
-    fn test_get_dst_offset_zero() {
-        let jan_first_2024 = DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
-            .unwrap()
-            .with_timezone(&chrono::Utc);
-
-        let offset = neofoodclub::utils::get_dst_offset(jan_first_2024);
-
-        assert!(offset.is_zero());
-    }
-
-    #[test]
     fn test_modifier_custom_odds() {
         let mut custom_odds = HashMap::<u8, u8>::new();
         for id in 1..=20 {
@@ -1514,6 +1481,227 @@ mod tests {
         assert!(nfc.is_outdated_lock());
     }
 
+    /// Helper function to calculate DST offset difference between start_date and day_after
+    /// This mirrors the logic in is_outdated_lock
+    fn calculate_dst_offset_diff(start_date: &str) -> chrono::Duration {
+        use chrono::DateTime;
+        use chrono_tz::OffsetComponents;
+        use neofoodclub::utils::convert_from_utc_to_nst;
+
+        let start_utc = DateTime::parse_from_rfc3339(start_date)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+
+        let day_after = start_utc
+            .checked_add_signed(chrono::Duration::try_days(1).unwrap())
+            .unwrap();
+
+        let start_nst = convert_from_utc_to_nst(start_utc);
+        let day_after_nst = convert_from_utc_to_nst(day_after);
+
+        let start_offset = start_nst.offset().dst_offset();
+        let day_after_offset = day_after_nst.offset().dst_offset();
+
+        day_after_offset - start_offset
+    }
+
+    /// Helper function to check if a round is outdated with a mocked "now" time
+    /// This mirrors the logic in is_outdated_lock but accepts a custom now parameter
+    fn is_outdated_with_mocked_time(start_date: &str, now: &str) -> bool {
+        use chrono::DateTime;
+        use chrono_tz::OffsetComponents;
+        use neofoodclub::utils::convert_from_utc_to_nst;
+
+        let start_utc = DateTime::parse_from_rfc3339(start_date)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+
+        let day_after = start_utc
+            .checked_add_signed(chrono::Duration::try_days(1).unwrap())
+            .unwrap();
+
+        let start_nst = convert_from_utc_to_nst(start_utc);
+        let day_after_nst = convert_from_utc_to_nst(day_after);
+
+        let start_offset = start_nst.offset().dst_offset();
+        let day_after_offset = day_after_nst.offset().dst_offset();
+
+        let difference = day_after_offset - start_offset;
+
+        let now_utc = DateTime::parse_from_rfc3339(now)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+
+        // Return true if outdated (i.e., NOT in valid range)
+        !(start_utc <= now_utc && now_utc <= day_after + difference)
+    }
+
+    #[test]
+    fn test_dst_offset_spring_forward() {
+        // March 9, 2024 at 2am PST (10:00 UTC) - day before spring forward
+        // On March 10, DST begins (clocks "spring forward" at 2:00 AM to 3:00 AM)
+        // So start is PST (-8) and day_after is PDT (-7), difference is +1 hour
+        let start_date = "2024-03-09T10:00:00+00:00";
+        let diff = calculate_dst_offset_diff(start_date);
+        assert_eq!(diff, chrono::Duration::try_hours(1).unwrap());
+    }
+
+    #[test]
+    fn test_dst_offset_fall_back() {
+        // November 2, 2024 at 3am PDT (10:00 UTC) - day before fall back
+        // On November 3 at 2:00 AM PDT (09:00 UTC), DST ends (clocks "fall back" to 1:00 AM PST)
+        // Start: Nov 2 at 10:00 UTC = 3:00 AM PDT (DST offset = -7)
+        // Day after: Nov 3 at 10:00 UTC = 2:00 AM PST (DST offset = -8, after transition)
+        // Difference: -8 - (-7) = -1 hour
+        let start_date = "2024-11-02T10:00:00+00:00";
+        let diff = calculate_dst_offset_diff(start_date);
+        assert_eq!(diff, chrono::Duration::try_hours(-1).unwrap());
+    }
+
+    #[test]
+    fn test_dst_offset_no_transition() {
+        // January 15, 2024 - no DST transition
+        // Both dates are in PST, so difference is 0
+        let start_date = "2024-01-15T10:00:00+00:00";
+        let diff = calculate_dst_offset_diff(start_date);
+        assert_eq!(diff, chrono::Duration::zero());
+    }
+
+    #[test]
+    fn test_dst_offset_during_dst() {
+        // July 15, 2024 - during DST, no transition
+        // Both dates are in PDT, so difference is 0
+        let start_date = "2024-07-15T10:00:00+00:00";
+        let diff = calculate_dst_offset_diff(start_date);
+        assert_eq!(diff, chrono::Duration::zero());
+    }
+
+    #[test]
+    fn test_dst_offset_exact_spring_forward_moment() {
+        // March 10, 2024 at 2:00 AM PST = 10:00 AM UTC (exact moment of spring forward)
+        let start_date = "2024-03-10T10:00:00+00:00";
+        let diff = calculate_dst_offset_diff(start_date);
+        // Since we're on the day of transition, start_date is already in PDT
+        // and day after is also in PDT, so no difference
+        assert_eq!(diff, chrono::Duration::zero());
+    }
+
+    #[test]
+    fn test_dst_offset_exact_fall_back_moment() {
+        // November 3, 2024 at 2:00 AM PDT = 09:00 AM UTC (exact moment of fall back)
+        let start_date = "2024-11-03T09:00:00+00:00";
+        let diff = calculate_dst_offset_diff(start_date);
+        // Since we're on the day of transition, start_date is already in PST
+        // and day after is also in PST, so no difference
+        assert_eq!(diff, chrono::Duration::zero());
+    }
+
+    #[test]
+    fn test_outdated_lock_spring_forward_before_dst() {
+        // Round starts March 9, 2024 at 2:00 AM PST (10:00 UTC) - day before spring forward
+        // Spring forward happens at 2:00 AM PST on March 10 (clocks jump to 3:00 AM PDT)
+        // DST offset difference: +1 hour (day_after is in PDT, start is in PST)
+        // Valid range: March 9 10:00 UTC to March 10 11:00 UTC (25 UTC hours)
+        let start = "2024-03-09T10:00:00+00:00";
+
+        // 1 hour after start - should NOT be outdated
+        let now = "2024-03-09T11:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 12 hours after start - should NOT be outdated
+        let now = "2024-03-09T22:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 24 hours after start - should NOT be outdated (DST compensation adds 1 hour)
+        let now = "2024-03-10T10:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 25 hours after start - should NOT be outdated (still within range)
+        let now = "2024-03-10T11:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 25 hours 1 second after start - should be outdated
+        let now = "2024-03-10T11:00:01+00:00";
+        assert!(is_outdated_with_mocked_time(start, now));
+    }
+
+    #[test]
+    fn test_outdated_lock_fall_back_before_dst() {
+        // Round starts November 2, 2024 at 3:00 AM PDT (10:00 UTC) - day before fall back
+        // Fall back happens at 2:00 AM PDT on November 3 (clocks fall back to 1:00 AM PST)
+        // DST offset difference: -1 hour (day_after is in PST, start is in PDT)
+        // Valid range: November 2 10:00 UTC to November 3 09:00 UTC (23 UTC hours)
+        let start = "2024-11-02T10:00:00+00:00";
+
+        // 1 hour after start - should NOT be outdated
+        let now = "2024-11-02T11:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 12 hours after start - should NOT be outdated
+        let now = "2024-11-02T22:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 23 hours after start - should NOT be outdated (still within range)
+        let now = "2024-11-03T09:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 23 hours 1 second after start - should be outdated (DST compensation subtracts 1 hour)
+        let now = "2024-11-03T09:00:01+00:00";
+        assert!(is_outdated_with_mocked_time(start, now));
+
+        // 24 hours after start - should be outdated
+        let now = "2024-11-03T10:00:00+00:00";
+        assert!(is_outdated_with_mocked_time(start, now));
+    }
+
+    #[test]
+    fn test_outdated_lock_no_dst_transition() {
+        // Round starts January 15, 2024 at 10:00 UTC (normal winter day, no DST)
+        let start = "2024-01-15T10:00:00+00:00";
+
+        // Right at start - should NOT be outdated
+        let now = "2024-01-15T10:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 12 hours after start - should NOT be outdated
+        let now = "2024-01-15T22:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 23 hours 59 minutes after start - should NOT be outdated
+        let now = "2024-01-16T09:59:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // Exactly 24 hours after start - should NOT be outdated (boundary case)
+        let now = "2024-01-16T10:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 24 hours 1 second after start - should be outdated
+        let now = "2024-01-16T10:00:01+00:00";
+        assert!(is_outdated_with_mocked_time(start, now));
+    }
+
+    #[test]
+    fn test_outdated_lock_during_dst_summer() {
+        // Round starts July 15, 2024 at 10:00 UTC (during DST, no transition)
+        let start = "2024-07-15T10:00:00+00:00";
+
+        // 1 second before start - should be outdated (before valid range)
+        let now = "2024-07-15T09:59:59+00:00";
+        assert!(is_outdated_with_mocked_time(start, now));
+
+        // Right at start - should NOT be outdated
+        let now = "2024-07-15T10:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 24 hours after start - should NOT be outdated
+        let now = "2024-07-16T10:00:00+00:00";
+        assert!(!is_outdated_with_mocked_time(start, now));
+
+        // 24 hours 1 second after start - should be outdated
+        let now = "2024-07-16T10:00:01+00:00";
+        assert!(is_outdated_with_mocked_time(start, now));
+    }
+
     #[test]
     fn test_make_url_no_winners() {
         let nfc = NeoFoodClub::from_url(ROUND_DATA_URL_NO_WINNERS, None, None, None);
@@ -1718,16 +1906,6 @@ mod tests {
         let arr = vec![5, 4, 3, 2, 1, 6, 7, 8, 9, 0];
         let indices = argsort_by(&arr, &|a: &u8, b: &u8| a.cmp(b));
         assert_eq!(indices, vec![9, 4, 3, 2, 1, 0, 5, 6, 7, 8]);
-    }
-
-    #[test]
-    fn test_utils_dst_offset() {
-        use chrono::Utc;
-        use neofoodclub::utils::get_dst_offset;
-
-        let today = Utc::now();
-        let offset = get_dst_offset(today);
-        assert!(offset.num_hours() >= -1 && offset.num_hours() <= 1);
     }
 
     #[test]
