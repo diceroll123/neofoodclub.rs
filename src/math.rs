@@ -27,25 +27,23 @@ const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
 /// ```
 #[inline(always)]
 pub fn pirate_binary(index: u8, arena: u8) -> u32 {
-    // Branchless version: create a mask that's 0xFFFFF for valid indices (1..=4), 0 otherwise
-    // Then apply the shift and mask the result
-    let valid_mask = ((index >= 1 && index <= 4) as u32).wrapping_neg();
-    let shift = ((index.wrapping_sub(1) as u32) + (arena as u32 * 4)) & 0x1F;
-    (0x80000 >> shift) & valid_mask
+    match index {
+        1..=4 => 0x80000 >> ((index - 1) + arena * 4),
+        _ => 0,
+    }
 }
 
 /// ```
 /// let bin = neofoodclub::math::pirates_binary([0, 1, 2, 3, 4]);
 /// assert_eq!(bin, 0x08421);
 /// ```
-#[inline]
+#[inline(always)]
 pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
-    bets_indices
-        .iter()
-        .enumerate()
-        .fold(0, |total, (arena, index)| {
-            total | pirate_binary(*index, arena as u8)
-        })
+    pirate_binary(bets_indices[0], 0)
+        | pirate_binary(bets_indices[1], 1)
+        | pirate_binary(bets_indices[2], 2)
+        | pirate_binary(bets_indices[3], 3)
+        | pirate_binary(bets_indices[4], 4)
 }
 
 /// ```
