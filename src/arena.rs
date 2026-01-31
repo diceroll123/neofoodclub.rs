@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ops::{Add, Sub};
 
 use crate::{
@@ -142,9 +143,14 @@ impl Arenas {
 
     /// Returns a vector of pirates by ID.
     pub fn get_pirates_by_id(&self, ids: &[u8]) -> Vec<Pirate> {
-        ids.iter()
-            .filter_map(|id| self.get_pirate_by_id(*id))
-            .collect()
+        let by_id: HashMap<u8, Pirate> = self
+            .arenas
+            .iter()
+            .flat_map(|arena| arena.pirates.iter().copied())
+            .map(|pirate| (pirate.id, pirate))
+            .collect();
+
+        ids.iter().filter_map(|id| by_id.get(id).copied()).collect()
     }
 
     /// Returns all pirates in the arenas.

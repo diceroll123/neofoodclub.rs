@@ -57,7 +57,10 @@ mod tests {
 
     use chrono::{DateTime, NaiveTime, TimeDelta};
     use neofoodclub::{
-        bets::BetAmounts, math::make_round_dicts, modifier::Modifier, pirates::PartialPirateThings,
+        bets::BetAmounts,
+        math::{make_round_dicts, pirate_binary},
+        modifier::Modifier,
+        pirates::PartialPirateThings,
     };
 
     use super::*;
@@ -800,6 +803,14 @@ mod tests {
     #[test]
     fn test_amounts_hash_to_bet_amounts_invalid() {
         let result = math::amounts_hash_to_bet_amounts("🎲");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid amounts hash"));
+    }
+
+    #[test]
+    fn test_amounts_hash_to_bet_amounts_invalid_length() {
+        // Valid charset, invalid length (must be a multiple of 3)
+        let result = math::amounts_hash_to_bet_amounts("a");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Invalid amounts hash"));
     }
@@ -1776,7 +1787,7 @@ mod tests {
     #[test]
     fn test_math_functions() {
         use neofoodclub::math::{
-            amounts_hash_to_bet_amounts, bets_hash_regex_check, binary_to_indices, pirate_binary,
+            amounts_hash_to_bet_amounts, bets_hash_check, binary_to_indices, pirate_binary,
             pirates_binary, random_full_pirates_binary,
         };
 
@@ -1785,13 +1796,39 @@ mod tests {
         assert_eq!(pirates_binary([0, 1, 2, 3, 4]), 0x08421);
         assert_eq!(random_full_pirates_binary().count_ones(), 5);
         assert_eq!(binary_to_indices(1), [0, 0, 0, 0, 4]);
-        assert!(bets_hash_regex_check("abcdefg").is_ok());
-        assert!(bets_hash_regex_check("abcdefz").is_err());
+        assert!(bets_hash_check("abcdefg").is_ok());
+        assert!(bets_hash_check("abcdefz").is_err());
         assert_eq!(
             amounts_hash_to_bet_amounts("AaYAbWAcUAdSAeQ").unwrap(),
             vec![Some(50), Some(100), Some(150), Some(200), Some(250)]
         );
         assert!(amounts_hash_to_bet_amounts("invalid!").is_err());
+    }
+
+    #[test]
+    fn test_binary_to_indices() {
+        use neofoodclub::math::binary_to_indices;
+
+        for i in 0..4 {
+            for j in 0..4 {
+                for k in 0..4 {
+                    for l in 0..4 {
+                        for m in 0..4 {
+                            assert_eq!(
+                                binary_to_indices(
+                                    pirate_binary(i, 0)
+                                        | pirate_binary(j, 1)
+                                        | pirate_binary(k, 2)
+                                        | pirate_binary(l, 3)
+                                        | pirate_binary(m, 4)
+                                ),
+                                [i, j, k, l, m]
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]

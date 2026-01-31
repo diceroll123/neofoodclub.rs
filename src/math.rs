@@ -3,7 +3,6 @@ use std::collections::{BTreeMap, HashMap};
 use rand::Rng;
 
 use crate::chance::Chance;
-use std::sync::OnceLock;
 
 pub const BET_AMOUNT_MIN: u32 = 1;
 pub const BET_AMOUNT_MAX: u32 = 70304;
@@ -21,9 +20,6 @@ const PIR_IB: [u32; 4] = [0x88888, 0x44444, 0x22222, 0x11111];
 
 // 0xFFFFF = 0b11111111111111111111 (20 '1's), will accept all pirates
 const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
-
-static VALID_AMOUNT_HASH_REGEX: OnceLock<regex::Regex> = OnceLock::new();
-static VALID_BETS_HASH_REGEX: OnceLock<regex::Regex> = OnceLock::new();
 
 /// ```
 /// let bin = neofoodclub::math::pirate_binary(3, 2);
@@ -74,29 +70,57 @@ pub fn random_full_pirates_binary() -> u32 {
 /// ```
 #[inline]
 pub fn binary_to_indices(binary: u32) -> [u8; 5] {
-    let mut indices = [0; 5];
+    // Maps a 4-bit arena nibble to its pirate index.
+    // Semantics match the previous implementation for all values 0..=15:
+    // - 0 => 0
+    // - otherwise => 4 - trailing_zeros(nibble)
+    // This is effectively a branchless, unrolled fast path.
+    const NIBBLE_TO_INDEX: [u8; 16] = [0, 4, 3, 4, 2, 4, 3, 4, 1, 4, 3, 4, 2, 4, 3, 4];
 
-    for (i, index) in indices.iter_mut().enumerate() {
-        let nibble = (binary >> (4 * (4 - i))) & 0xF;
-
-        if nibble != 0 {
-            *index = 4 - nibble.trailing_zeros() as u8;
-        }
-    }
-    indices
+    [
+        NIBBLE_TO_INDEX[((binary >> 16) & 0xF) as usize],
+        NIBBLE_TO_INDEX[((binary >> 12) & 0xF) as usize],
+        NIBBLE_TO_INDEX[((binary >> 8) & 0xF) as usize],
+        NIBBLE_TO_INDEX[((binary >> 4) & 0xF) as usize],
+        NIBBLE_TO_INDEX[(binary & 0xF) as usize],
+    ]
 }
 
 #[inline]
-pub fn bets_hash_regex_check(bets_hash: &str) -> Result<(), String> {
-    let valid_bets_hash_regex =
-        VALID_BETS_HASH_REGEX.get_or_init(|| regex::Regex::new("^[a-y]*$").unwrap());
-
-    if !valid_bets_hash_regex.is_match(bets_hash) {
+pub fn bets_hash_check(bets_hash: &str) -> Result<(), String> {
+    if !bets_hash
+        .as_bytes()
+        .iter()
+        .all(|&b| matches!(b, b'a'..=b'y'))
+    {
         return Err(format!(
             "Invalid bet hash '{}'. Must contain only characters a-y.",
             bets_hash
         ));
     }
+    Ok(())
+}
+
+#[inline]
+pub fn amounts_hash_check(amounts_hash: &str) -> Result<(), String> {
+    if !amounts_hash.len().is_multiple_of(3) {
+        return Err(format!(
+            "Invalid amounts hash '{}'. Length must be a multiple of 3.",
+            amounts_hash
+        ));
+    }
+
+    if !amounts_hash
+        .as_bytes()
+        .iter()
+        .all(|&b| b.is_ascii_alphabetic())
+    {
+        return Err(format!(
+            "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
+            amounts_hash
+        ));
+    }
+
     Ok(())
 }
 
@@ -119,7 +143,7 @@ pub fn bets_hash_regex_check(bets_hash: &str) -> Result<(), String> {
 /// ```
 #[inline]
 pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Result<Vec<[u8; 5]>, String> {
-    bets_hash_regex_check(bets_hash)?;
+    bets_hash_check(bets_hash)?;
 
     let indices: Vec<u8> = bets_hash.bytes().map(|byte| byte - b'a').collect();
 
@@ -169,7 +193,7 @@ pub fn bets_hash_to_bet_indices(bets_hash: &str) -> Result<Vec<[u8; 5]>, String>
 /// ```
 #[inline]
 pub fn bets_hash_to_bets_count(bets_hash: &str) -> Result<usize, String> {
-    bets_hash_regex_check(bets_hash)?;
+    bets_hash_check(bets_hash)?;
     Ok(bets_hash_to_bet_indices(bets_hash)?.len())
 }
 
@@ -186,7 +210,8 @@ pub fn bets_hash_to_bets_count(bets_hash: &str) -> Result<usize, String> {
 /// ```
 #[inline]
 pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
-    let mut result = vec!['\0'; bet_amounts.len() * 3];
+    // Build as ASCII bytes directly; avoids `Vec<char>` + UTF-8 re-encoding on collect.
+    let mut result = vec![0_u8; bet_amounts.len() * 3];
     let mut index = result.len();
 
     for &value in bet_amounts.iter().rev() {
@@ -198,14 +223,15 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
             state /= 52;
 
             result[index] = if letter_index < 26 {
-                (letter_index + b'a') as char
+                letter_index + b'a'
             } else {
-                (letter_index + b'A' - 26) as char
+                (letter_index - 26) + b'A'
             };
         }
     }
 
-    result.iter().collect()
+    // Safety: we only write ASCII [a-zA-Z] bytes.
+    unsafe { String::from_utf8_unchecked(result) }
 }
 
 /// Returns the bet amounts from a given bet amounts hash.
@@ -219,38 +245,47 @@ pub fn bet_amounts_to_amounts_hash(bet_amounts: &[Option<u32>]) -> String {
 /// ```
 #[inline]
 pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>>, String> {
-    // check that the hash matches regex "^[a-zA-Z]*$" using regex
-    let valid_hash_regex =
-        VALID_AMOUNT_HASH_REGEX.get_or_init(|| regex::Regex::new("^[a-zA-Z]*$").unwrap());
-
-    // Check that the hash matches the regex
-    if !valid_hash_regex.is_match(amounts_hash) {
-        return Err(format!(
-            "Invalid amounts hash '{}'. Must contain only characters a-z and A-Z.",
-            amounts_hash
-        ));
+    #[inline]
+    fn decode_index(byte: u8) -> u32 {
+        match byte {
+            b'a'..=b'z' => (byte - b'a') as u32,
+            b'A'..=b'Z' => (byte - b'A' + 26) as u32,
+            _ => unreachable!("amounts_hash_check ensures only ASCII [a-zA-Z] bytes"),
+        }
     }
 
-    Ok(amounts_hash
-        .as_bytes()
-        .chunks(3)
-        .map(|chunk| {
-            let mut value = 0_u32;
+    amounts_hash_check(amounts_hash)?;
 
-            for &byte in chunk {
-                value *= 52;
-                let index = if let b'a'..=b'z' = byte {
-                    (byte - b'a') as u32
-                } else {
-                    (byte - b'A' + 26) as u32
-                };
-                value += index;
-            }
+    #[inline]
+    fn push_decoded(out: &mut Vec<Option<u32>>, value: u32) {
+        let decoded = value.saturating_sub(BET_AMOUNT_MAX);
+        out.push(if decoded >= BET_AMOUNT_MIN {
+            Some(decoded)
+        } else {
+            None
+        });
+    }
 
-            let value = value.saturating_sub(BET_AMOUNT_MAX);
-            Some(value).filter(|&v| v >= BET_AMOUNT_MIN)
-        })
-        .collect())
+    let bytes = amounts_hash.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len() / 3);
+
+    // validates and decodes, pushing every 3 chars.
+    let mut value = 0_u32;
+    let mut n = 0_u8;
+
+    for &b in bytes {
+        let idx = decode_index(b);
+        value = value * 52 + idx;
+        n += 1;
+
+        if n == 3 {
+            push_decoded(&mut out, value);
+            value = 0;
+            n = 0;
+        }
+    }
+
+    Ok(out)
 }
 
 /// Returns the bet binaries from a given bet hash.
@@ -266,7 +301,7 @@ pub fn amounts_hash_to_bet_amounts(amounts_hash: &str) -> Result<Vec<Option<u32>
 ///```
 #[inline]
 pub fn bets_hash_to_bet_binaries(bets_hash: &str) -> Result<Vec<u32>, String> {
-    bets_hash_regex_check(bets_hash)?;
+    bets_hash_check(bets_hash)?;
     Ok(bets_hash_to_bet_indices(bets_hash)?
         .iter()
         .map(|&indices| pirates_binary(indices))
@@ -475,4 +510,35 @@ pub fn build_chance_objects(
         tail -= value;
     }
     chances
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn amounts_hash_check_accepts_multiple_of_three_ascii_letters() {
+        assert!(amounts_hash_check("").is_ok());
+        assert!(amounts_hash_check("AaY").is_ok());
+        assert!(amounts_hash_check("AaYAaY").is_ok());
+        assert!(amounts_hash_check("abcDEF").is_ok());
+    }
+
+    #[test]
+    fn amounts_hash_check_rejects_length_not_multiple_of_three() {
+        let err = amounts_hash_check("Aa").unwrap_err();
+        assert_eq!(
+            err,
+            "Invalid amounts hash 'Aa'. Length must be a multiple of 3."
+        );
+    }
+
+    #[test]
+    fn amounts_hash_check_rejects_non_alphabetic_characters() {
+        let err = amounts_hash_check("Aa1").unwrap_err();
+        assert_eq!(
+            err,
+            "Invalid amounts hash 'Aa1'. Must contain only characters a-z and A-Z."
+        );
+    }
 }
