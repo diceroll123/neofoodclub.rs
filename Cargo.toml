@@ -21,3 +21,10 @@ name = "neofoodclub"
 [[example]]
 name = "all_bets_table"
 path = "examples/all_bets_table.rs"
+
+[[bench]]
+name = "math_benches"
+harness = false
+
+[dev-dependencies]
+divan = { version = "4.3.0", package = "codspeed-divan-compat" }
