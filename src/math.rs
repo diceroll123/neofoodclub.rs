@@ -348,7 +348,11 @@ pub fn bets_indices_to_bet_binaries(bets_indices: Vec<[u8; 5]>) -> Vec<u32> {
 
 #[inline]
 fn ib_doable(binary: u32) -> bool {
-    BIT_MASKS.iter().all(|&mask| binary & mask != 0)
+    (binary & 0xF0000 != 0)
+        && (binary & 0xF000 != 0)
+        && (binary & 0xF00 != 0)
+        && (binary & 0xF0 != 0)
+        && (binary & 0xF != 0)
 }
 
 #[inline]
