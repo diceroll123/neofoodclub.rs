@@ -33,18 +33,21 @@ pub fn pirate_binary(index: u8, arena: u8) -> u32 {
     }
 }
 
+// Maps pirate index to its nibble value: 0 => 0, 1 => 8, 2 => 4, 3 => 2, 4 => 1
+const INDEX_TO_NIBBLE: [u32; 5] = [0, 8, 4, 2, 1];
+
 /// ```
 /// let bin = neofoodclub::math::pirates_binary([0, 1, 2, 3, 4]);
 /// assert_eq!(bin, 0x08421);
 /// ```
 #[inline]
 pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
-    bets_indices
-        .iter()
-        .enumerate()
-        .fold(0, |total, (arena, index)| {
-            total | pirate_binary(*index, arena as u8)
-        })
+    // Each arena occupies 4 bits: arena 0 at bits 16-19, arena 4 at bits 0-3.
+    (INDEX_TO_NIBBLE[bets_indices[0] as usize] << 16)
+        | (INDEX_TO_NIBBLE[bets_indices[1] as usize] << 12)
+        | (INDEX_TO_NIBBLE[bets_indices[2] as usize] << 8)
+        | (INDEX_TO_NIBBLE[bets_indices[3] as usize] << 4)
+        | INDEX_TO_NIBBLE[bets_indices[4] as usize]
 }
 
 /// ```
