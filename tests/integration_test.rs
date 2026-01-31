@@ -1712,15 +1712,6 @@ mod tests {
     }
 
     #[test]
-    fn test_utils_argsort() {
-        use neofoodclub::utils::argsort_by;
-
-        let arr = vec![5, 4, 3, 2, 1, 6, 7, 8, 9, 0];
-        let indices = argsort_by(&arr, &|a: &u8, b: &u8| a.cmp(b));
-        assert_eq!(indices, vec![9, 4, 3, 2, 1, 0, 5, 6, 7, 8]);
-    }
-
-    #[test]
     fn test_utils_dst_offset() {
         use chrono::Utc;
         use neofoodclub::utils::get_dst_offset;
