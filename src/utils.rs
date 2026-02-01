@@ -7,13 +7,7 @@ use std::sync::OnceLock;
 static INDICES_3124: OnceLock<Box<[usize; 3124]>> = OnceLock::new();
 
 fn get_indices_3124() -> &'static [usize; 3124] {
-    INDICES_3124.get_or_init(|| {
-        let mut arr = [0usize; 3124];
-        for (i, v) in arr.iter_mut().enumerate() {
-            *v = i;
-        }
-        Box::new(arr)
-    })
+    INDICES_3124.get_or_init(|| Box::new(std::array::from_fn(|i| i)))
 }
 
 /// Specialized argsort for 3124-element slices
