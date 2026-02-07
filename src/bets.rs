@@ -224,9 +224,10 @@ impl Bets {
     /// Creates a new Bets struct from a list of binaries
     pub fn from_binaries(nfc: &NeoFoodClub, binaries: Vec<u32>) -> Self {
         // maintaining the order of the binaries is important, at the cost of some performance
+        let data = nfc.round_dict_data();
         let bin_indices: Vec<usize> = binaries
             .iter()
-            .filter_map(|b| nfc.round_dict_data().bins.iter().position(|bin| bin == b))
+            .filter_map(|b| data.bin_to_index.get(b).copied())
             .collect();
 
         Self::new(nfc, bin_indices)

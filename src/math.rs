@@ -423,6 +423,7 @@ pub fn expand_ib_object(bets: &[[u8; 5]], bet_odds: &[u32]) -> HashMap<u32, u32>
 #[derive(Debug, Clone)]
 pub struct RoundDictData {
     pub bins: Vec<u32>,
+    pub bin_to_index: HashMap<u32, usize>,
     pub probs: Vec<f64>,
     pub odds: Vec<u32>,
     pub ers: Vec<f64>,
@@ -476,8 +477,11 @@ pub fn make_round_dicts(stds: [[f64; 5]; 5], odds: [[u8; 5]; 5]) -> RoundDictDat
         }
     }
 
+    let bin_to_index: HashMap<u32, usize> = bins.iter().enumerate().map(|(i, &b)| (b, i)).collect();
+
     RoundDictData {
         bins,
+        bin_to_index,
         probs,
         odds: odds_vec,
         ers,
