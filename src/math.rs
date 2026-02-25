@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use rand::Rng;
+use rand::RngExt;
 
 use crate::chance::Chance;
 
