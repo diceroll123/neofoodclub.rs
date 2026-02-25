@@ -547,7 +547,7 @@ impl NeoFoodClub {
         let mut rng = rand::rng();
 
         let chosen_values: Vec<usize> =
-            (0..3124).choose_multiple(&mut rng, self.max_amount_of_bets());
+            (0..3124).sample(&mut rng, self.max_amount_of_bets());
 
         let mut bets = Bets::new(self, chosen_values);
         bets.fill_bet_amounts(self);
