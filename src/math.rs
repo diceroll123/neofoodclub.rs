@@ -39,12 +39,11 @@ pub fn pirate_binary(index: u8, arena: u8) -> u32 {
 /// ```
 #[inline]
 pub fn pirates_binary(bets_indices: [u8; 5]) -> u32 {
-    bets_indices
-        .iter()
-        .enumerate()
-        .fold(0, |total, (arena, index)| {
-            total | pirate_binary(*index, arena as u8)
-        })
+    pirate_binary(bets_indices[0], 0)
+        | pirate_binary(bets_indices[1], 1)
+        | pirate_binary(bets_indices[2], 2)
+        | pirate_binary(bets_indices[3], 3)
+        | pirate_binary(bets_indices[4], 4)
 }
 
 /// ```
