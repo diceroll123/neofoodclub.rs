@@ -495,7 +495,6 @@ dependencies = [
  "codspeed-divan-compat",
  "comfy-table",
  "itertools",
- "querystring",
  "rand",
  "serde",
  "serde_json",
@@ -603,12 +602,6 @@ checksum = "a31971752e70b8b2686d7e46ec17fb38dad4051d94024c88df49b667caea9c84"
 dependencies = [
  "unicode-ident",
 ]
-
-[[package]]
-name = "querystring"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9318ead08c799aad12a55a3e78b82e0b6167271ffd1f627b758891282f739187"
 
 [[package]]
 name = "quote"

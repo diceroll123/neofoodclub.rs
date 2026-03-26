@@ -14,13 +14,25 @@ use crate::utils::{argsort_slice_3124, get_dst_offset};
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use itertools::Itertools;
-use querystring::stringify;
 use rand::seq::IteratorRandom;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::models::multinomial_logit::MultinomialLogitModel;
 use crate::models::original::OriginalModel;
 use crate::pirates::Pirate;
+
+#[derive(Serialize)]
+struct UrlAllDataParams<'a> {
+    pirates: &'a str,
+    #[serde(rename = "openingOdds")]
+    opening_odds: &'a str,
+    #[serde(rename = "currentOdds")]
+    current_odds: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    winners: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    timestamp: Option<&'a str>,
+}
 
 #[allow(non_snake_case)]
 #[derive(Debug, Deserialize)]
@@ -887,36 +899,29 @@ impl NeoFoodClub {
         }
 
         if all_data {
-            let mut params = vec![];
-
             let pirates = serde_json::to_string(&self.round_data.pirates)
                 .expect("Failed to serialize pirates.");
-            params.push(("pirates", pirates.as_str()));
-
             let opening_odds = serde_json::to_string(&self.round_data.openingOdds)
                 .expect("Failed to serialize openingOdds.");
-            params.push(("openingOdds", opening_odds.as_str()));
-
-            let mut params = vec![];
-
             let current_odds = serde_json::to_string(&self.round_data.currentOdds)
                 .expect("Failed to serialize currentOdds.");
-            params.push(("currentOdds", current_odds.as_str()));
-
-            let winners_string = if self.is_over() {
-                serde_json::to_string(&self.winners()).unwrap()
+            let winners = if self.is_over() {
+                Some(serde_json::to_string(&self.winners()).expect("Failed to serialize winners."))
             } else {
-                String::new()
+                None
             };
-            if !winners_string.is_empty() {
-                params.push(("winners", winners_string.as_str()));
-            }
 
-            if let Some(timestamp) = self.timestamp().as_ref() {
-                params.push(("timestamp", timestamp.as_str()));
-            }
+            let params = UrlAllDataParams {
+                pirates: &pirates,
+                opening_odds: &opening_odds,
+                current_odds: &current_odds,
+                winners: winners.as_deref(),
+                timestamp: self.timestamp().as_ref().map(|s| s.as_str()),
+            };
 
-            url.push_str(&stringify(params));
+            let qs = serde_qs::to_string(&params).expect("Failed to serialize URL query string.");
+            url.push('&');
+            url.push_str(&qs);
         }
 
         url

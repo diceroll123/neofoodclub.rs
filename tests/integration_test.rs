@@ -52,7 +52,6 @@ mod tests {
     // we parallelize our round data calculations, so nothing is guaranteed to be in order
     // so in our tests we will be sorting and comparing that way
 
-    use core::panic;
     use std::collections::HashMap;
 
     use chrono::{DateTime, NaiveTime, TimeDelta};
@@ -62,8 +61,16 @@ mod tests {
         modifier::Modifier,
         pirates::PartialPirateThings,
     };
+    use serde::Deserialize;
 
     use super::*;
+
+    #[derive(Deserialize)]
+    struct MakeUrlFragment {
+        round: u16,
+        b: String,
+        a: String,
+    }
 
     #[test]
     fn test_getters() {
@@ -150,25 +157,22 @@ mod tests {
 
         let url = nfc.make_url(Some(&bets), true, false);
 
-        let [(beginning, round_number), (b, bets_hash), (a, amounts_hash)] =
-            querystring::querify(&url)[..]
-        else {
-            panic!("Failed to parse query strings from URL.");
-        };
+        let fragment = url.split_once('#').expect("URL must contain #").1;
+        let parsed: MakeUrlFragment =
+            serde_qs::from_str(fragment).expect("URL fragment should parse");
 
-        assert_eq!(beginning, "https://neofood.club/#round");
-        assert_eq!(round_number, nfc.round().to_string());
-        assert_eq!(b, "b");
-        assert_eq!(a, "a");
+        assert_eq!(parsed.round, nfc.round());
+        assert_eq!(parsed.b, bets.bets_hash());
+        assert_eq!(bets.amounts_hash().as_deref(), Some(parsed.a.as_str()));
 
-        let mut binaries = math::bets_hash_to_bet_binaries(bets_hash).unwrap();
+        let mut binaries = math::bets_hash_to_bet_binaries(&parsed.b).unwrap();
         binaries.sort_unstable();
 
         let expected_binaries = [4096, 8192, 16400, 16416, 16448, 16512, 32768];
 
         assert_eq!(binaries, expected_binaries);
 
-        let mut bet_amounts = math::amounts_hash_to_bet_amounts(amounts_hash).unwrap();
+        let mut bet_amounts = math::amounts_hash_to_bet_amounts(&parsed.a).unwrap();
 
         bet_amounts.sort_unstable();
 
