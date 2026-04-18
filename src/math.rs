@@ -27,9 +27,12 @@ const CONVERT_PIR_IB: [u32; 5] = [0xFFFFF, 0x88888, 0x44444, 0x22222, 0x11111];
 /// ```
 #[inline]
 pub fn pirate_binary(index: u8, arena: u8) -> u32 {
-    match index {
-        1..=4 => 0x80000 >> ((index - 1) + arena * 4),
-        _ => 0,
+    // we assume that index is always 0..=4
+    // and arena is always 0..=4
+    if index > 0 && index <= 4 && arena <= 4 {
+        0x80000 >> ((index - 1) + arena * 4)
+    } else {
+        0
     }
 }
 
